@@ -3,13 +3,22 @@
             [rewrite-clj.node :as node]
             [clojure.test :as t]))
 
-
-(defmethod node->hiccup :custom
+(defn custom-dispatch
   [node]
-  (let [node-tag    (node/tag node)
-        tag-method  (get (.getMethodTable node->hiccup) node-tag)
-        node-hiccup (tag-method node)]
-    (update-in node-hiccup [1 :class] str " custom-type")))
+  (let [form-meta (node-form-meta node)]
+    ;; example elision of adorn-specific metadata
+    (if (= #{:display/type} (set (keys form-meta)))
+      (let [child-node  (peek (node/children node))
+            node-tag    (node/tag child-node)
+            tag-method  (get-method node->hiccup node-tag)
+            node-hiccup (tag-method node)]
+        (update-in node-hiccup [1 :class] str " custom-type"))
+      (let [node-tag    (node/tag node)
+            tag-method  (get-method node->hiccup node-tag)
+            node-hiccup (tag-method node)]
+        (update-in node-hiccup [1 :class] str " custom-type")))))
+
+(defmethod node->hiccup :custom [node] (custom-dispatch node))
 
 (t/deftest exprs
   (t/testing "source code display"
@@ -60,8 +69,8 @@
                           (get-in (str->hiccup "'(+ something something)")
                                   [1 :class])))
           "Quoted expressions should be correctly identified"))
-  (let [str-hiccup  (str->hiccup "^{:type :custom} {:a 2}")
-        expr-hiccup (let [m ^{:type :custom} {:a 2}] (expr->hiccup m))]
+  (let [str-hiccup  (str->hiccup "^{:display/type :custom} {:a 2}")
+        expr-hiccup (let [m ^{:display/type :custom} {:a 2}] (expr->hiccup m))]
     (t/is (re-find #"custom" (get-in str-hiccup [1 :class]))
           "Dispatch based on :type metadata should work")
     (t/is (re-find #"custom" (get-in expr-hiccup [1 :class]))
