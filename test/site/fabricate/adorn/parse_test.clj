@@ -3,6 +3,14 @@
             [rewrite-clj.node :as node]
             [clojure.test :as t]))
 
+
+(defmethod node->hiccup :custom
+  [node]
+  (let [node-tag    (node/tag node)
+        tag-method  (get (.getMethodTable node->hiccup) node-tag)
+        node-hiccup (tag-method node)]
+    (update-in node-hiccup [1 :class] str " custom-type")))
+
 (t/deftest exprs
   (t/testing "source code display"
     (t/is (= [:span {:class "language-clojure list"}
@@ -51,4 +59,10 @@
     (t/is (some? (re-find #"quote"
                           (get-in (str->hiccup "'(+ something something)")
                                   [1 :class])))
-          "Quoted expressions should be correctly identified")))
+          "Quoted expressions should be correctly identified"))
+  (let [str-hiccup  (str->hiccup "^{:type :custom} {:a 2}")
+        expr-hiccup (let [m ^{:type :custom} {:a 2}] (expr->hiccup m))]
+    (t/is (re-find #"custom" (get-in str-hiccup [1 :class]))
+          "Dispatch based on :type metadata should work")
+    (t/is (re-find #"custom" (get-in expr-hiccup [1 :class]))
+          "Dispatch based on :type metadata should work")))

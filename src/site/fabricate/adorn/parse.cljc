@@ -17,7 +17,17 @@
   [class & contents]
   (apply conj [:span {:class (str "language-clojure " class)}] contents))
 
-(defmulti node->hiccup tag)
+(defn node-info
+  "Get the type of the node for display, defaulting to the rewrite-clj tag.
+
+  If ^{:type :custom-type} metadata has been set on the form, return the type."
+  [node]
+  (let [form-meta (if (node/sexpr-able? node)
+                    (meta (node/sexpr node)))
+        form-type (get form-meta :type)]
+    (if (keyword? form-type) form-type (tag node))))
+
+(defmulti node->hiccup node-info)
 
 (defn- atom-class
   [node]
