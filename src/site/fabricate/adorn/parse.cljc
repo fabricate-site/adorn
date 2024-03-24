@@ -216,13 +216,11 @@
 
 (defn expr->hiccup
   "Converts the given expression into a hiccup element tokenzed into spans by the value type."
-  {:malli/schema [:=> [:cat :any] [:vector :any]]}
   [expr]
   (node->hiccup (rewrite-clj.node/coerce expr)))
 
 (defn fn->spec-form
   "Converts the given function symbol into the conformed spec for function definition"
-  {:malli/schema [:=> [:cat :symbol] [:vector :any]]}
   [fn-sym]
   (-> fn-sym
       source-fn
@@ -232,6 +230,5 @@
 
 (defn str->hiccup
   "Converts the given Clojure string into a hiccup element"
-  {:malli/schema [:=> [:cat :string] [:vector :any]]}
   [expr-str]
   (node->hiccup (p/parse-string expr-str)))
