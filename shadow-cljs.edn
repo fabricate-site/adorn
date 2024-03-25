@@ -1,0 +1,4 @@
+{:builds       {:test {:autorun   true
+                       :output-to "generated/node-tests.js"
+                       :target    :node-test}}
+ :source-paths ["src" "test"]}

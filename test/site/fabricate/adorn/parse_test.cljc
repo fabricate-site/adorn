@@ -1,7 +1,8 @@
 (ns site.fabricate.adorn.parse-test
   (:require [site.fabricate.adorn.parse :as parse :refer :all]
             [rewrite-clj.node :as node]
-            [clojure.test :as t]))
+            #?(:clj [clojure.test :as t]
+               :cljs [cljs.test :as t])))
 
 (defn custom-dispatch
   [node]

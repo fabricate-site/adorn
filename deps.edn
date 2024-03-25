@@ -1,4 +1,6 @@
-{:aliases {:test {:exec-fn     cognitect.test-runner.api/test
+{:aliases {:cljs {:extra-deps {org.clojure/clojurescript {:mvn/version
+                                                          "1.11.54"}}}
+           :test {:exec-fn     cognitect.test-runner.api/test
                   :extra-deps  {io.github.cognitect-labs/test-runner
                                 {:git/url
                                  "https://github.com/cognitect-labs/test-runner"

@@ -20,3 +20,25 @@ If you want to add syntax highlighting to your project without using a JavaScrip
 - Conversion of Hiccup to HTML. While this conversion will be necessary in order to verify the output of `adorn`, this will strictly be a dev-time dependency. What generates HTML from the Hiccup produced by adorn is up to the user.
 - Validation of output HTML.
 - Support for other languages.
+
+
+# Development
+
+## Clojure
+Assuming that the Clojure CLI is installed:
+
+To execute the project's tests:
+```bash
+clojure -X:test
+```
+
+
+## Clojure
+Assuming that npm (globally) and shadow-cljs (locally) are installed:
+
+To execute the project's tests:
+```bash
+npx shadow-cljs compile test
+```
+
+
