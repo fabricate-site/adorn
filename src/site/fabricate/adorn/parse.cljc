@@ -3,7 +3,6 @@
    [rewrite-clj.node :as node :refer [tag sexpr]]
    [rewrite-clj.parser :as p]
    [rewrite-clj.zip :as z]
-   [clojure.repl :refer [source-fn]]
    [clojure.string :as str]))
 
 (def ^:dynamic *escapes*
@@ -127,7 +126,7 @@
                                                           (str "%" (inc ix)))])
                                                       params)))
         edited-node (z/node (z/postwalk
-                             (z/edn (node/coerce body))
+                             (z/of-node (node/coerce body))
                              (fn select [zloc] (symbol? (z/sexpr zloc)))
                              (fn visit [zloc] (z/edit zloc #(get r % %)))))]
     (apply span
@@ -235,15 +234,6 @@
   "Converts the given expression into a hiccup element tokenzed into spans by the value type."
   [expr]
   (node->hiccup (rewrite-clj.node/coerce expr)))
-
-(defn fn->spec-form
-  "Converts the given function symbol into the conformed spec for function definition"
-  [fn-sym]
-  (-> fn-sym
-      source-fn
-      read-string
-      rest
-      (#(clojure.spec.alpha/conform :clojure.core.specs.alpha/defn-args %))))
 
 (defn str->hiccup
   "Converts the given Clojure string into a hiccup element"
