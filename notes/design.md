@@ -16,3 +16,9 @@ Being based on `rewrite-clj` means that there likely will need to be a separatio
 These aren't tagged by `rewrite-clj` as "special", even though they define the basic semantic units of the program whose code is being converted to Hiccup forms; `rewrite-clj` operates on the level of syntax. Luckily, [Clojure itself](https://github.com/clojure/core.specs.alpha) provides the tools necessary to recognize the s-expressions that carry this semantic information and distinguish them from those that don't.
 
 These specifications can also be used for generative testing of `adorn`'s core functions.
+
+## Documentation
+
+**Obviously** `adorn` must use itself to document itself.
+
+`cljs` compatibility means that we can create a page that allows users to view the converted hiccup of any Clojure form with no server-side code. A "surprise me" button could generate a random one (using the specs above).
