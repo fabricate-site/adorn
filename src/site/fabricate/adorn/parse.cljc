@@ -50,7 +50,7 @@
                                (sexpr node)
                                (type (sexpr node)))))
 
-(defn sym-node->hiccup
+(defn- sym-node->hiccup
   "Generate a Hiccup data structure from the given symbol node.
 
   Separates the namespace from the symbol, if present."
@@ -65,7 +65,7 @@
         (escape-html sym-name)]]
       [:span {:class "language-clojure symbol"} (escape-html sym-name)])))
 
-(defn kw-node->hiccup
+(defn- kw-node->hiccup
   "Generate a Hiccup data structure from the given keyword node.
 
   Separates the namespace from the keyword, if present."
