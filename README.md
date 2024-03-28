@@ -9,7 +9,10 @@ If you want to add syntax highlighting to your project without using a JavaScrip
 - [Clygments](https://github.com/bfontaine/clygments) wraps the [Pygments](https://pygments.org/) Python library, which obviously means this library introduces a dependency on Python. 
 
 ## Goals
-- [ ] CLJC compatibility; generation of Hiccup forms using both Clojure, ClojureScript, and Babashka.
+- [ ] CLJC compatibility; generation of Hiccup forms using:
+  - [ ] Clojure 
+  - [ ] ClojureScript 
+  - [ ] Babashka
 - [ ] provide sensible defaults and an example of styling using plain CSS
   - [ ] including at least one useful Flexbox example
 - [ ] provide an override mechanism for users who want to display particular forms in special ways
@@ -33,7 +36,7 @@ clojure -X:test
 ```
 
 
-## Clojure
+## ClojureScript
 Assuming that npm (globally) and shadow-cljs (locally) are installed:
 
 To execute the project's tests:
