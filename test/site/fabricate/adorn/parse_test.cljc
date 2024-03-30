@@ -2,9 +2,15 @@
   (:require
    #?(:clj [clojure.test :as t]
       :cljs [cljs.test :as t])
+   #?(:clj [clojure.spec.alpha :as spec])
+   #?(:clj [clojure.core.specs.alpha :as specs]
+      :cljs [cljs.core.specs.alpha :as specs])
+   [clojure.test.check :as check]
+   [clojure.test.check.generators :as gen]
+   [clojure.test.check.properties :as prop]
+   [clojure.test.check.clojure-test :refer [defspec]]
    [site.fabricate.adorn.parse :as parse]
-   [rewrite-clj.node :as node]
-   ))
+   [rewrite-clj.node :as node]))
 
 (defn custom-dispatch
   [node]
@@ -78,3 +84,14 @@
           "Dispatch based on :type metadata should work")
     (t/is (re-find #"custom" (get-in expr-hiccup [1 :class]))
           "Dispatch based on :type metadata should work")))
+
+(def convertible?
+  (prop/for-all
+   [form (gen/one-of
+          [gen/any
+           #_(spec/gen 'clojure.core/fn) ;; doesn't work yet
+           #_(spec/gen 'clojure.core/defn) ;; doesn't work yet
+           ])]
+   (vector? (parse/expr->hiccup form))))
+
+(defspec any-val 2500 convertible?)
