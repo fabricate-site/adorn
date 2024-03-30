@@ -27,7 +27,7 @@
 (defn node-info
   "Get the type of the node for display, defaulting to the rewrite-clj tag.
 
-  If ^{:type :custom-type} metadata has been set on the form, return the type."
+  If ^{:display/type :custom-type} metadata has been set on the form, return the type."
   [node]
   (let [form-meta (node-form-meta node)
         form-type (get form-meta :display/type)]
