@@ -1,5 +1,4 @@
-{:builds       {:test {:autorun   true
-                       :output-to "generated/node-tests.js"
-                       :target    :node-test}}
- :dependencies [[rewrite-clj/rewrite-clj "1.1.47"]]
- :source-paths ["src" "test"]}
+{:builds {:test {:autorun   true
+                 :output-to "generated/node-tests.js"
+                 :target    :node-test}}
+ :deps   {:aliases [:cljs :test]}}
