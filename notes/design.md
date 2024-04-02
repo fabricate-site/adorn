@@ -17,6 +17,14 @@ These aren't tagged by `rewrite-clj` as "special", even though they define the b
 
 These specifications can also be used for generative testing of `adorn`'s core functions.
 
+## Testing
+
+Finding the right edge cases is challenging. `gen/any` almost certainly isn't generating function definitions, so I need to think about testing under a more robust set of constraints.  `core.specs.alpha` can validate functions, defns, destructure bindings, etc, but struggles to generate them. There may be two options for how to do it, both of which introduce additional dependencies:
+- use spec2 (some discussion on Clojure slack about this)
+- use malli (likely involves translating the core specs into malli schemas with custom generators)
+
+Another idea: once a form is generated, I can use `rewrite-clj` to alter it for mutation testing. Start with a known good form and try to break it, then see whether conversion fails.
+
 ## Documentation
 
 **Obviously** `adorn` must use itself to document itself.
