@@ -88,6 +88,8 @@
 (def convertible?
   (prop/for-all
    [form (gen/one-of
+          ;; gen/any is fine, but constraints are necessary to make sure
+          ;; the tests reach the tricky cases
           [gen/any
            #_(spec/gen 'clojure.core/fn) ;; doesn't work yet
            #_(spec/gen 'clojure.core/defn) ;; doesn't work yet

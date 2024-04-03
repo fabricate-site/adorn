@@ -1,0 +1,31 @@
+:root {
+    --color-white: #ececec;
+    --color-charcoal: #333;
+    --color-navy: #211f43;
+    --color-dark-forest-green: #1f382f;
+    --color-brick: #973c3f;
+    --color-light-blue: #426b8c;
+    --color-tan: #b99d82;
+    --color-forest-green: #00662f;
+    --color-gold: #f9be00;
+    font-family: 'Alegreya', serif;
+
+}
+
+code {
+    font-family: 'Recursive', monospace;
+    font-optical-sizing: auto;
+    font-variation-settings: "MONO" 1, "CRSV" 1, "CASL" 0.01;
+}
+
+article {
+    font-size: min(4.25vmin, 22px);
+    max-width: 65ch;
+    line-height: 1.38em;
+    color: var(--color-charcoal);
+    margin-left: 5em;
+}
+
+a {
+    color: var(--color-forest-green)
+}
