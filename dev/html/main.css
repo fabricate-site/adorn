@@ -8,19 +8,20 @@
     --color-tan: #b99d82;
     --color-forest-green: #00662f;
     --color-gold: #f9be00;
-    font-family: 'Alegreya', serif;
+    font-family: "Newsreader", Iowan Old Style, Apple Garamond, Baskerville, Times New Roman, Droid Serif, Times, Source Serif Pro, serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol;
 
 }
 
-code {
-    font-family: 'Recursive', monospace;
+pre, code {
+    font-family: "Recursive", Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
     font-optical-sizing: auto;
-    font-variation-settings: "MONO" 1, "CRSV" 1, "CASL" 0.01;
+    font-variation-settings: "MONO" 1, "CRSV" 0, "CASL" 0.01;
 }
 
 article {
     font-size: min(4.25vmin, 22px);
-    max-width: 65ch;
+    font-optical-sizing: auto;
+    max-width: 58ch;
     line-height: 1.38em;
     color: var(--color-charcoal);
     margin-left: 5em;
@@ -28,4 +29,23 @@ article {
 
 a {
     color: var(--color-forest-green)
+}
+
+p code {
+    font-size: 0.9em;
+}
+li code {
+    font-size: 0.9em;
+}
+
+pre {
+    max-width: 80ch;
+}
+
+.eczar-display {
+    font-family: Eczar, serif;
+    font-optical-sizing: auto;
+    font-weight: 600;
+    letter-spacing: 0.015em;
+    font-size: 2em;
 }
