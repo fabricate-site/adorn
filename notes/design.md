@@ -17,6 +17,73 @@ These aren't tagged by `rewrite-clj` as "special", even though they define the b
 
 These specifications can also be used for generative testing of `adorn`'s core functions.
 
+### Idea: dispatch maps
+
+Controlled display of subforms can be achieved if you pass through a map with specialized dispatch. Here's an example: say you want a map to be turned into a definition list instead of a regular sequence of spans.
+
+```clojure
+(clj->hiccup 
+ {"term1" "definition 1"
+  "term2" "definition 2"}
+ {:display/type :map->dl})
+
+;; dispatch occurs
+
+;; result =>
+(comment
+  [:dl [:dt "term1"] [:dd "definition 1"]
+   [:dt "term2"] [:dd "definition 2"]])
+
+
+```
+
+Now say you've got a vector of maps you want to turn into `<dl>` elements in the same way. Using metadata on each individually is tedious, but there could be another way:
+
+```clojure
+
+(clj->hiccup
+ [{"term1" "definition 1"
+   "term2" "definition 2"}]
+ {:display/type :div
+  :display/overrides
+  {:map :map->dl}})
+
+```
+
+Now any map element that's a subform of the input collection will be transformed into a definition list. This offers an incredibly powerful and general way of converting Clojure into not just tokenized elements for source code display, but lots of different visual (Hiccup) representations.
+
+So it turns out that syntax highlighting is just a special case of a much more general capability.
+
+An alternative model for dispatch:
+
+```clojure
+(clj->hiccup
+ [{"term1" "definition 1"
+   "term2" "definition 2"}]
+ {:display/type 
+  {:map {:string :escape-string}
+   :vector #'vec->list
+   :*root (fn vec->dl [vec]
+            (apply conj [:dl {:class "clj-map-dl"} ]
+                   (map (fn [[t d]] [:dt t] [:dd (clj->hiccup d)]))))}})
+```
+
+5 ideas embedded in this small example:
+1. nested dispatch for contextual display
+2. using a special keyword like `:root` or `:self*` to set the display type of the top-level form
+3. combining "overrides" and "display type" into a single option
+4. Using a function defined inline
+5. dispatching to a var instead of a keyword
+
+### Questions with this approach
+- How can the use of arbitrary inline functions be made safe on the client side?
+- 
+
+## Node-level API
+Another idea: define more of the core of what `adorn` does in terms of the `rewrite-clj.node` or `rewrite-clj.zip` APIs. Maybe implement a custom `HiccupNode` implementation of the relevant protocols? That way people familiar with `rewrite-clj` can build things on top of `adorn`'s custom types.
+
+Actually this may just mean... creating a `->hiccup` protocol and extending all the `rewrite-clj` types to support it?
+
 ## Testing
 
 Finding the right edge cases is challenging. `gen/any` almost certainly isn't generating function definitions, so I need to think about testing under a more robust set of constraints.  `core.specs.alpha` can validate functions, defns, destructure bindings, etc, but struggles to generate them. There may be two options for how to do it, both of which introduce additional dependencies:
