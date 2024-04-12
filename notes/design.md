@@ -80,9 +80,11 @@ An alternative model for dispatch:
 - 
 
 ## Node-level API
-Another idea: define more of the core of what `adorn` does in terms of the `rewrite-clj.node` or `rewrite-clj.zip` APIs. Maybe implement a custom `HiccupNode` implementation of the relevant protocols? That way people familiar with `rewrite-clj` can build things on top of `adorn`'s custom types.
+Another idea: define more of the core of what `adorn` does in terms of the `rewrite-clj.node` or `rewrite-clj.zip` APIs.
 
-Actually this may just mean... creating a `->hiccup` protocol and extending all the `rewrite-clj` types to support it?
+
+### A new `Node` protocol
+Maybe implement a custom `HiccupNode` protocol with an extra method - `hiccup*` - that implements all existing `Node` ops as well. That way people familiar with `rewrite-clj` can build things on top of `adorn`'s custom types. This idea needs further consideration. I don't think I understand protocols well enough yet. I also don't think they're as flexible as multimethods, so that would be a problem as well.
 
 ## Testing
 
