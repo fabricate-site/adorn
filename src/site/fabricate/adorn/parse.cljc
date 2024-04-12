@@ -3,18 +3,9 @@
    [rewrite-clj.node :as node :refer [tag sexpr]]
    [rewrite-clj.parser :as p]
    [rewrite-clj.zip :as z]
+   [site.fabricate.adorn.forms :as forms]
    [clojure.string :as str]))
 
-(def ^:dynamic *escapes*
-  "Escape character substitutions for HTML."
-  {\< "&lt;", \> "&gt;", \& "&amp;"})
-
-(defn escape-html [s]
-  (str/escape s *escapes*))
-
-(defn- span
-  [class & contents]
-  (apply conj [:span {:class (str "language-clojure " class)}] contents))
 
 (defn node-form-meta
   "Get the metadata of the Clojure form contained in the given node.
@@ -27,13 +18,47 @@
 (defn node-info
   "Get the type of the node for display, defaulting to the rewrite-clj tag.
 
-  If ^{:display/type :custom-type} metadata has been set on the form, return the type."
-  [node]
-  (let [form-meta (node-form-meta node)
-        form-type (get form-meta :display/type)]
-    (if (keyword? form-type) form-type (tag node))))
+  If `^{:display/type :custom-type}` metadata has been set on the form, return the type.
+  `:display/type` passed as an option in the options map takes precedence over metadata.
+  `:display/type` can also be a map indicating how child nodes should be handled,
+  in which case the `:self*` entry is used for the top-level node."
+  ([node opts]
+   (let [form-meta (node-form-meta node)
+         display-type (or (get opts :display/type) (get form-meta :display/type))
+         self-display-type (or (when (map? display-type) (:self* display-type))
+                               display-type)]
+     (cond (keyword? self-display-type) self-display-type
+           (ifn? self-display-type) :display/fn
+           (var? self-display-type) :display/var
+           :default (tag node))))
+  ([node] (node-info node {})))
+
+;; see examples of multi-arity multimethods here:
+;; - https://stackoverflow.com/questions/10313657/is-it-possible-to-overload-clojure-multi-methods-on-arity
 
 (defmulti node->hiccup node-info)
+
+(comment
+  (var-get #'str)
+  (resolve 'str)
+
+  (node-info [{:a 1 :b 2}] {:display/type :dl})
+
+  (node-info [{:a 1 :b 2}] {:display/type str})
+
+  )
+
+(defmethod node->hiccup :display/fn [node opts]
+  (let [display-fn (get opts :display/type)]
+    (display-fn node opts)))
+
+(defmethod node->hiccup :display/var [node opts]
+  (let [display-fn (var-get (get opts :display/type))]
+    (display-fn node opts)))
+
+(defn- span
+  [class & contents]
+  (apply conj [:span {:class (str "language-clojure " class)}] contents))
 
 (defn- atom-class
   [node]
@@ -50,43 +75,14 @@
                                (sexpr node)
                                (type (sexpr node)))))
 
-(defn- sym-node->hiccup
-  "Generate a Hiccup data structure from the given symbol node.
 
-  Separates the namespace from the symbol, if present."
-  [node]
-  (let [sym      (node/sexpr node)
-        sym-ns   (namespace sym)
-        sym-name (name sym)]
-    (if sym-ns
-      [:span {:class "language-clojure symbol"}
-       [:span {:class "language-clojure symbol-ns"} (escape-html sym-ns)] "/"
-       [:span {:class "language-clojure symbol-name"}
-        (escape-html sym-name)]]
-      [:span {:class "language-clojure symbol"} (escape-html sym-name)])))
-
-(defn- kw-node->hiccup
-  "Generate a Hiccup data structure from the given keyword node.
-
-  Separates the namespace from the keyword, if present."
-  [node]
-  (let [kw      (node/sexpr node)
-        kw-ns   (namespace kw)
-        kw-name (name kw)]
-    (if kw-ns
-      [:span {:class "language-clojure keyword"} ":"
-       [:span {:class "language-clojure keyword-ns"} (escape-html kw-ns)] "/"
-       [:span {:class "language-clojure keyword-name"}
-        (escape-html kw-name)]]
-      [:span {:class "language-clojure keyword"} ":"
-       (escape-html kw-name)])))
 
 (defmethod node->hiccup :token
   [node]
   (let [node-class (atom-class node)]
-    (cond (= "symbol" node-class) (sym-node->hiccup node)
-          (= "keyword" node-class) (kw-node->hiccup node)
-          :default (span (atom-class node) (escape-html (str node))))))
+    (cond (= "symbol" node-class) (forms/symbol->span node)
+          (= "keyword" node-class) (forms/keyword->span node)
+          :default (span (atom-class node) (forms/escape-html (str node))))))
 
 (defmethod node->hiccup :whitespace
   [node]
@@ -110,6 +106,9 @@
   [node]
   (and (= (:tag node) :list) (= 'fn* (:value (first (:children node))))))
 
+
+;; this is a really tricky one, as it involves rewriting the expanded
+;; function to resemble the input
 (defn- fn-node->hiccup
   [node]
   (let [contents    (:children node)
@@ -137,8 +136,6 @@
 
 (defmethod node->hiccup :fn
   [node]
-  ;; this is a really tricky one, as it involves rewriting the expanded
-  ;; function to resemble the input
   (fn-node->hiccup node))
 
 (defmethod node->hiccup :list
