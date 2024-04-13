@@ -57,13 +57,14 @@
   (node/coerce #'str)
   (first (:children (node/coerce #'str))))
 
-(def classes
+(def node-html-classes
   "Default HTML class lookup for node types"
   {:var          "var"
    :fn           "fn"
    :symbol       "symbol"
+   :keyword      "keyword"
    :meta         "meta"
-   :multi-line   "multi-line"
+   :multi-line   "string multi-line"
    :whitespace   "whitespace"
    :comma        "comma"
    :uneval       "uneval"
@@ -96,7 +97,9 @@
   {:var     :data-clojure-var
    :symbol  :data-clojure-symbol
    :keyword :data-clojure-keyword
-   :class   :data-java-class})
+   :class   :data-java-class
+   :source  :data-clojure-source
+   :git-sha :data-git-sha})
 
 
 
@@ -130,7 +133,6 @@
         kw      (node/sexpr node)
         kw-ns   (namespace kw)
         kw-name (name kw)]
-    [:span (class-name)]
     (if kw-ns
       [:span
        {:class "language-clojure keyword"
@@ -155,14 +157,12 @@
         var-sym      (:value var-sym-node)
         var-ns       (namespace var-sym)
         var-name     (name var-sym)]
-    [:span
-     {:class (class-name node)
-      :data-clojure-var (escape-html (:string-value var-sym-node))}
+    [:span (node-attributes node)
      (if var-ns
-       (list [:span {:class (class-name "var-ns")} var-ns]
+       (list [:span {:class "language-clojure var-ns"} var-ns]
              "/"
-             [:span {:class (class-name "var-name")} var-name])
-       [:span {:class (class-name "var-name")} var-name])]))
+             [:span {:class "language-clojure var-name"} var-name])
+       [:span {:class "language-clojure var-name"} var-name])]))
 
 
 ;; can there be a "plain function" version of the ->hiccup fns for composite
@@ -186,10 +186,13 @@
 ;; then it's not clear how to "swap in" the multimethod version
 ;; and if they're not, then it feels like there's two separate implementations
 
-(def token-classes
+(def token-types
+  ;; TODO: these need to be specified in a cljc-compatible way;
+  ;; the cljs types are different
   {rewrite_clj.node.stringz.StringNode :string
    rewrite_clj.node.keyword.KeywordNode :keyword
    clojure.lang.Symbol :symbol
+   clojure.lang.Keyword :keyword
    java.lang.Long :long
    java.lang.Integer :integer
    clojure.lang.BigInt :big-int
@@ -202,37 +205,55 @@
 
 (defn token-type
   [node]
-  (get token-classes
-       (type node)
-       (get token-classes (type (:value node)) :unknown)))
+  (get token-types (type node) (get token-types (type (:value node)) :unknown)))
 
 (defn node-type
   [node]
   (let [t (tag node)] (if-not (= :token t) t (token-type node))))
 
-(defn class-name
-  ([v]
-   (cond (node/node? v) (str "language-clojure " (classes (tag v)))
-         (string? v)    (str "language-clojure " v))))
-
 (defn node-class
   [node]
   (if-let [v (:value node)]
     (type v)
-    (when (node/sexpr-able? node) (type (node/sexpr node)))))
+    (let [nt (node-type node)]
+      (cond (= :var nt)        clojure.lang.Var
+            (= :multi-line nt) java.lang.String
+            (and (= :token (tag node)) (node/sexpr-able? node))
+            (type (node/sexpr node))))))
 
 (defn node-attributes
-  "Get the HTML element attributes for the given form"
+  "Get the HTML element attributes for the given form.
+
+  Allows passing through arbitrary attributes (apart from the :class attr)."
   ([node
-    {:keys [class-name] :as attrs :or {class-name (classes (node-type node))}}]
-   {:class (str "language-clojure " class-name)
-    :data-java-class (.getName (node-class node))})
+    {:keys [class-name]
+     :as   attrs
+     :or   {class-name (node-html-classes (node-type node))}}]
+   (let [nt (node-type node)] ;; TODO: make class specification
+     ;; cljc-friendly
+     (merge {:data-java-class (.getName (node-class node))
+             :class (str "language-clojure " class-name)}
+            (when (= :symbol nt) {:data-clojure-symbol (str node)})
+            (when (= :keyword nt) {:data-clojure-keyword (str node)})
+            (when (= :var nt) {:data-clojure-var (str node)})
+            (dissoc attrs :class-name :class))))
   ([node] (node-attributes node {})))
 
-
-(defn token->span [n] (let [node (->node n) node-type (token-type node)] ()))
+(defn token->span
+  ([node attrs]
+   (let [t (token-type node)]
+     (let [h [:span (node-attributes node attrs)]]
+       (if (= :string t)
+         (apply conj h (interpose [:br] (:lines node)))
+         (conj h (str node))))))
+  ([node] (token->span node {})))
 
 (comment
+  (node-class (p/parse-string "\"abc
+def
+ghi\""))
+  (node-class (node/coerce (var str)))
+  (node-class (node/coerce #'str))
   (type 3)
   (str (node/coerce 3))
   (token-type (node/coerce "str"))
@@ -252,7 +273,7 @@
        :comma        nil
        :uneval       nil
        :vector       vector->span
-       :token        nil
+       :token        token->span
        :syntax-quote nil
        :list         list->span
        :var          nil
@@ -266,6 +287,7 @@
        :forms        nil
        :default/value?)))
   ;; escape hatch: different arity?
+  ;; or should it be a dynamic var?
   ([n node-fn] (node-fn n)))
 
 (comment

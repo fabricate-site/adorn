@@ -1,10 +1,9 @@
 (ns site.fabricate.adorn.parse
-  (:require
-   [rewrite-clj.node :as node :refer [tag sexpr]]
-   [rewrite-clj.parser :as p]
-   [rewrite-clj.zip :as z]
-   [site.fabricate.adorn.forms :as forms]
-   [clojure.string :as str]))
+  (:require [rewrite-clj.node :as node :refer [tag sexpr]]
+            [rewrite-clj.parser :as p]
+            [rewrite-clj.zip :as z]
+            [site.fabricate.adorn.forms :as forms]
+            [clojure.string :as str]))
 
 
 (defn node-form-meta
@@ -12,8 +11,7 @@
 
   Returns nil if node has no metadata or can't be converted to a s-expression."
   [node]
-  (if (node/sexpr-able? node)
-    (meta (node/sexpr node))))
+  (if (node/sexpr-able? node) (meta (node/sexpr node))))
 
 (defn node-info
   "Get the type of the node for display, defaulting to the rewrite-clj tag.
@@ -23,8 +21,9 @@
   `:display/type` can also be a map indicating how child nodes should be handled,
   in which case the `:self*` entry is used for the top-level node."
   ([node opts]
-   (let [form-meta (node-form-meta node)
-         display-type (or (get opts :display/type) (get form-meta :display/type))
+   (let [form-meta         (node-form-meta node)
+         display-type      (or (get opts :display/type)
+                               (get form-meta :display/type))
          self-display-type (or (when (map? display-type) (:self* display-type))
                                display-type)]
      (cond (keyword? self-display-type) self-display-type
@@ -34,27 +33,25 @@
   ([node] (node-info node {})))
 
 ;; see examples of multi-arity multimethods here:
-;; - https://stackoverflow.com/questions/10313657/is-it-possible-to-overload-clojure-multi-methods-on-arity
+;; -
+;; https://stackoverflow.com/questions/10313657/is-it-possible-to-overload-clojure-multi-methods-on-arity
 
 (defmulti node->hiccup node-info)
 
 (comment
   (var-get #'str)
   (resolve 'str)
-
   (node-info [{:a 1 :b 2}] {:display/type :dl})
+  (node-info [{:a 1 :b 2}] {:display/type str}))
 
-  (node-info [{:a 1 :b 2}] {:display/type str})
+(defmethod node->hiccup :display/fn
+  [node opts]
+  (let [display-fn (get opts :display/type)] (display-fn node opts)))
 
-  )
-
-(defmethod node->hiccup :display/fn [node opts]
-  (let [display-fn (get opts :display/type)]
-    (display-fn node opts)))
-
-(defmethod node->hiccup :display/var [node opts]
-  (let [display-fn (var-get (get opts :display/type))]
-    (display-fn node opts)))
+;; TODO: fix this; var-get doesn't exist in cljs
+(defmethod node->hiccup :display/var
+  [node opts]
+  (let [display-fn (var-get (get opts :display/type))] (display-fn node opts)))
 
 (defn- span
   [class & contents]
@@ -134,9 +131,7 @@
            (conj (mapv node->hiccup (:children edited-node))
                  (span "close-paren" ")")))))
 
-(defmethod node->hiccup :fn
-  [node]
-  (fn-node->hiccup node))
+(defmethod node->hiccup :fn [node] (fn-node->hiccup node))
 
 (defmethod node->hiccup :list
   [node]
@@ -218,10 +213,7 @@
 
 (defmethod node->hiccup :comment
   [node]
-  (span (name (tag node))
-        (:prefix node)
-        (str/replace (:s node) "\n" "")
-        [:br]))
+  (span (name (tag node)) (:prefix node) (str/replace (:s node) "\n" "") [:br]))
 
 (-> "; a comment\n; another comment\n(+ 1 1)"
     p/parse-string-all)
