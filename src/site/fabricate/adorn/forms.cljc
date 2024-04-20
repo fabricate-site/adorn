@@ -107,22 +107,6 @@
    :source  :data-clojure-source
    :git-sha :data-git-sha})
 
-;; can there be a "plain function" version of the ->hiccup fns for composite
-;; forms?
-;; I guess they could all just accept a map (similar to the multimethod) and
-;; have
-;; defaults as a fallback?
-
-;; they are mutually recursive (a map can be in a vector and a vector can be in
-;; a map)
-;; so the only way to make composite forms work would be by forward declaration
-
-(declare ->span)
-(declare map->span)
-(declare vector->span)
-(declare list->span)
-(declare fn->span)
-
 
 
 (def token-types
@@ -147,9 +131,6 @@
              java.math.BigDecimal :big-decimal java.lang.Class :class]
        :cljs [js/Number :number js/String :string])})
 
-(comment
-  (type true)
-  (symbol (.getName (type 3))))
 
 ;; the above lookup map may be "too clever" -
 ;; just going with (number? v) seems better
@@ -231,6 +212,22 @@
   (node-attributes (node/coerce (var str)) {:classes ["c1 c2"]})
   (node-class (node/coerce (var str))))
 
+;; can there be a "plain function" version of the ->hiccup fns for composite
+;; forms?
+;; I guess they could all just accept a map (similar to the multimethod) and
+;; have
+;; defaults as a fallback?
+
+;; they are mutually recursive (a map can be in a vector and a vector can be in
+;; a map)
+;; so the only way to make composite forms work would be by forward declaration
+
+(declare ->span)
+(declare map->span)
+(declare vector->span)
+(declare list->span)
+(declare fn->span)
+
 (defn token->span
   ([node attrs]
    (let [t (literal-type node)]
@@ -241,63 +238,50 @@
   ([node] (token->span node {})))
 
 
-
-
 (defn symbol->span
   "Generate a Hiccup <span> data structure from the given symbol.
 
   Separates the namespace from the symbol, if present."
-  [n]
-  (let [node     (->node n)
-        sym      (node/sexpr node)
+  [node]
+  (let [sym      (node/sexpr node)
         sym-ns   (namespace sym)
-        sym-name (name sym)]
+        sym-name (name sym)
+        attrs    (node-attributes node)]
     (if sym-ns
-      [:span
-       {:class "language-clojure symbol"
-        :data-clojure-symbol (escape-html (:string-value node))}
+      [:span attrs
        [:span {:class "language-clojure symbol-ns"} (escape-html sym-ns)] "/"
        [:span {:class "language-clojure symbol-name"} (escape-html sym-name)]]
-      [:span
-       {:class "language-clojure symbol"
-        :data-clojure-symbol (escape-html (:string-value node))}
-       (escape-html sym-name)])))
+      [:span attrs (escape-html sym-name)])))
 
 
 (defn keyword->span
   "Generate a Hiccup <span> data structure from the given keyword node.
 
   Separates the namespace from the keyword, if present."
-  [n]
-  (let [node    (->node n)
-        kw      (node/sexpr node)
+  [node]
+  (let [kw      (node/sexpr node)
         kw-ns   (namespace kw)
-        kw-name (name kw)]
+        kw-name (name kw)
+        attrs   (node-attributes node)]
     (if kw-ns
-      [:span
-       {:class "language-clojure keyword"
-        :data-clojure-keyword (escape-html (:string-value node))} ":"
+      [:span attrs ":"
        [:span {:class "language-clojure keyword-ns"} (escape-html kw-ns)] "/"
        [:span {:class "language-clojure keyword-name"} (escape-html kw-name)]]
-      [:span
-       {:class "language-clojure keyword"
-        :data-clojure-keyword (escape-html (:string-value node))} ":"
-       (escape-html kw-name)])))
+      [:span attrs ":" (escape-html kw-name)])))
 
 
 (defn var->span
-  [n]
-  (let [node         (->node n)
-        var-sym-node (first (:children node))
+  [node]
+  (let [var-sym-node (first (:children node))
         var-sym      (:value var-sym-node)
         var-ns       (namespace var-sym)
-        var-name     (name var-sym)]
-    [:span (node-attributes node)
-     (if var-ns
-       (list [:span {:class "language-clojure var-ns"} var-ns]
-             "/"
-             [:span {:class "language-clojure var-name"} var-name])
-       [:span {:class "language-clojure var-name"} var-name])]))
+        var-name     (name var-sym)
+        attrs        (node-attributes node)]
+    (if var-ns
+      [:span attrs [:span {:class "language-clojure var-ns"} var-ns] "/"
+       [:span {:class "language-clojure var-name"} var-name]]
+      [:span attrs (str node)])))
+
 
 ;; if the multimethods are going to be implemented in terms of these
 ;; defaults,
@@ -312,7 +296,7 @@
      (case (tag node)
        :fn           fn->span
        :meta         nil
-       :multi-line   nil
+       :multi-line   token->span
        :whitespace   nil
        :comma        nil
        :uneval       nil
