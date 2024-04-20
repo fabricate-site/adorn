@@ -399,6 +399,33 @@
   (p/parse-string "@my-atom")
   (node/children (node/coerce (list 1 1 2))))
 
+(defn fn->span
+  ([node attrs]
+   (let [attrs       (node-attributes node attrs)
+         contents    (node/children node)
+         [_ params body] (node/sexpr node)
+         r           (cond (= 0 (count params)) {}
+                           (= 1 (count params)) {(first params) '%}
+                           (and (= 2 (count params)) (= '& (first params)))
+                           {(second params) '%&}
+                           :else                (into {}
+                                                      (map-indexed
+                                                       (fn [ix sym]
+                                                         [sym
+                                                          (symbol
+                                                           (str "%" (inc ix)))])
+                                                       params)))
+         edited-node (z/node (z/postwalk
+                              (z/of-node (node/coerce body))
+                              (fn select [zloc] (symbol? (z/sexpr zloc)))
+                              (fn visit [zloc] (z/edit zloc #(get r % %)))))]
+     (conj (into [:span attrs (:dispatch tokens) (:paren/open tokens)]
+                 (map ->span (node/children edited-node)))
+           (:paren/close tokens))))
+  ([node] (fn->span node {})))
+
+(comment
+  (str (resolve '+)))
 
 ;; if the multimethods are going to be implemented in terms of these
 ;; defaults,
@@ -433,7 +460,7 @@
        :forms        (apply list (map ->span (node/children node)))
        ;; escape hatch: different arity?
        ;; or should it be a dynamic var?
-       :default/value?)))
+       [:span (node-attributes node {:classes ["unknown"]}) (str node)])))
   ([n] (->span n {})))
 
 

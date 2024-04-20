@@ -88,7 +88,6 @@
                  (re-find #"example-val" (get-in span [1 :class])))))))
 
 
-
 (t/deftest forms
   (t/testing "simple forms"
     (t/is (= "language-clojure symbol"
@@ -112,7 +111,24 @@
                      [1 :class])))
     (t/is (= "language-clojure meta"
              (get-in (forms/meta->span (p/parse-string "^:meta sym"))
-                     [1 :class])))))
+                     [1 :class])))
+    (t/is (not (re-find
+                #"unknown"
+                (get-in
+                 (forms/->span
+                  (p/parse-string
+                   "#?(:clj [:clj :vec]
+                  :cljs [:cljs :vec])"))
+                 [1 :class]))))
+    (t/is (not (re-find
+                #"unknown"
+                (get-in
+                 (forms/->span
+                  (p/parse-string
+                   "#?(:clj [:clj :vec]
+                  :cljs [:cljs :vec])"))
+                 [1 :class]))))
+    (t/is (= "+" (peek (nth (forms/fn->span (p/parse-string "#(+ % 2)")) 4))))))
 
 (t/deftest multiforms
   (let [parsed
@@ -121,5 +137,12 @@
                                     "test/site/fabricate/adorn/forms_test.cljc"
                                     "utf8")
                      p/parse-string-all))]
-    (t/is (some? (forms/->span parsed)))
-    (forms/->span parsed)))
+    (clojure.walk/postwalk (fn [f]
+                             (if (and (map? f) (contains? f :class))
+                               (do (t/is
+                                    (not (re-find #"unknown" (:class f)))
+                                    "all forms in source code should be parsed")
+                                   f)
+                               f))
+                           (forms/->span parsed))
+    (t/is (some? (forms/->span parsed)))))
