@@ -82,6 +82,11 @@
   (t/testing "simple forms"
     (t/is (= "language-clojure symbol"
              (get-in (forms/symbol->span (node/coerce 'ns/sym)) [1 :class])))
+    (t/is (= "forms_test.cljc"
+             (get-in (forms/symbol->span (node/coerce 'ns/sym)
+                                         {:src/file "forms_test.cljc"})
+                     [1 :src/file]))
+          "Span fns should support attribute passthrough")
     (t/is (= "language-clojure keyword"
              (get-in (forms/keyword->span (node/coerce :ns/kw)) [1 :class])))
     (t/is (= "language-clojure var"

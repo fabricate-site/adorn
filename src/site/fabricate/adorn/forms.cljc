@@ -242,45 +242,48 @@
   "Generate a Hiccup <span> data structure from the given symbol.
 
   Separates the namespace from the symbol, if present."
-  [node]
-  (let [sym      (node/sexpr node)
-        sym-ns   (namespace sym)
-        sym-name (name sym)
-        attrs    (node-attributes node)]
-    (if sym-ns
-      [:span attrs
-       [:span {:class "language-clojure symbol-ns"} (escape-html sym-ns)] "/"
-       [:span {:class "language-clojure symbol-name"} (escape-html sym-name)]]
-      [:span attrs (escape-html sym-name)])))
+  ([node attrs]
+   (let [sym      (node/sexpr node)
+         sym-ns   (namespace sym)
+         sym-name (name sym)
+         attrs    (node-attributes node attrs)]
+     (if sym-ns
+       [:span attrs
+        [:span {:class "language-clojure symbol-ns"} (escape-html sym-ns)] "/"
+        [:span {:class "language-clojure symbol-name"} (escape-html sym-name)]]
+       [:span attrs (escape-html sym-name)])))
+  ([node] (symbol->span node {})))
 
 
 (defn keyword->span
   "Generate a Hiccup <span> data structure from the given keyword node.
 
   Separates the namespace from the keyword, if present."
-  [node]
-  (let [kw      (node/sexpr node)
-        kw-ns   (namespace kw)
-        kw-name (name kw)
-        attrs   (node-attributes node)]
-    (if kw-ns
-      [:span attrs ":"
-       [:span {:class "language-clojure keyword-ns"} (escape-html kw-ns)] "/"
-       [:span {:class "language-clojure keyword-name"} (escape-html kw-name)]]
-      [:span attrs ":" (escape-html kw-name)])))
+  ([node attrs]
+   (let [kw      (node/sexpr node)
+         kw-ns   (namespace kw)
+         kw-name (name kw)
+         attrs   (node-attributes node attrs)]
+     (if kw-ns
+       [:span attrs ":"
+        [:span {:class "language-clojure keyword-ns"} (escape-html kw-ns)] "/"
+        [:span {:class "language-clojure keyword-name"} (escape-html kw-name)]]
+       [:span attrs ":" (escape-html kw-name)])))
+  ([node] (keyword->span node {})))
 
 
 (defn var->span
-  [node]
-  (let [var-sym-node (first (:children node))
-        var-sym      (:value var-sym-node)
-        var-ns       (namespace var-sym)
-        var-name     (name var-sym)
-        attrs        (node-attributes node)]
-    (if var-ns
-      [:span attrs [:span {:class "language-clojure var-ns"} var-ns] "/"
-       [:span {:class "language-clojure var-name"} var-name]]
-      [:span attrs (str node)])))
+  ([node attrs]
+   (let [var-sym-node (first (:children node))
+         var-sym      (:value var-sym-node)
+         var-ns       (namespace var-sym)
+         var-name     (name var-sym)
+         attrs        (node-attributes node attrs)]
+     (if var-ns
+       [:span attrs [:span {:class "language-clojure var-ns"} var-ns] "/"
+        [:span {:class "language-clojure var-name"} var-name]]
+       [:span attrs (str node)])))
+  ([node] (var->span node {})))
 
 
 ;; if the multimethods are going to be implemented in terms of these
@@ -291,19 +294,19 @@
 
 
 (defn ->span
-  ([n]
+  ([n attrs]
    (let [node (->node n)]
      (case (tag node)
-       :fn           fn->span
+       :fn           (fn->span node attrs)
        :meta         nil
-       :multi-line   token->span
+       :multi-line   (token->span node attrs)
        :whitespace   nil
        :comma        nil
        :uneval       nil
-       :vector       vector->span
-       :token        token->span
+       :vector       (vector->span node attrs)
+       :token        (token->span node attrs)
        :syntax-quote nil
-       :list         list->span
+       :list         (list->span node attrs)
        :var          nil
        :quote        nil
        :deref        nil
@@ -313,10 +316,10 @@
        :newline      nil
        :map          nil
        :forms        nil
+       ;; escape hatch: different arity?
+       ;; or should it be a dynamic var?
        :default/value?)))
-  ;; escape hatch: different arity?
-  ;; or should it be a dynamic var?
-  ([n node-fn] (node-fn n)))
+  ([n] (->span n {})))
 
 (comment
   ;; example of annotating a node with the source code type
