@@ -124,9 +124,6 @@
 (declare fn->span)
 
 
-;; if the multimethods are going to be implemented in terms of these defaults,
-;; then it's not clear how to "swap in" the multimethod version
-;; and if they're not, then it feels like there's two separate implementations
 
 (def token-types
   ;; TODO: these need to be specified in a cljc-compatible way;
@@ -154,67 +151,92 @@
   (type true)
   (symbol (.getName (type 3))))
 
-(defn token-type
+;; the above lookup map may be "too clever" -
+;; just going with (number? v) seems better
+;; that platform info can be added later if it's present
+
+(defn literal-type
+  "Return the literal type for the given token node.
+
+  Intended to be consistent across clj+cljs."
   [node]
-  (get token-types (type node) (get token-types (type (:value node)) :unknown)))
+  (cond (:lines node) :string
+        (:k node) :keyword
+        (boolean? (:value node)) :boolean
+        (number? (:value node)) :number
+        (nil? (:value node)) :nil
+        (symbol? (:value node)) :symbol
+        (char? (:value node)) :character
+        :default :object))
 
 (defn node-type
   [node]
-  (let [t (tag node)] (if-not (= :token t) t (token-type node))))
+  (let [t (tag node)] (if-not (= :token t) t (literal-type node))))
+
+(def platform-classes
+  "Classes for each platform"
+  {:string     {:clj 'java.lang.String :cljs 'js/String}
+   :multi-line {:clj 'java.lang.String :cljs 'js/String}
+   :number     {:clj 'java.lang.Number :cljs 'js/Number}
+   :symbol     {:clj 'clojure.lang.Symbol :cljs 'cljs.core/Symbol}
+   :keyword    {:clj 'clojure.lang.Keyword :cljs 'cljs.core/Keyword}
+   :var        {:clj 'clojure.lang.Var :cljs 'cljs.core/Var}
+   :character  {:clj 'java.lang.Character :cljs 'js/String}
+   :boolean    {:clj 'java.lang.Boolean :cljs 'js/Boolean}
+   :object     {:clj 'java.lang.Object :cljs 'js/Object}})
+
 
 ;; TODO: make this static with dynamic fallback
 (defn node-class
-  [node]
-  (if-let [v (:value node)]
-    (type v)
-    (let [nt (node-type node)]
-      (cond (= :var nt)        #?(:clj clojure.lang.Var
-                                  :cljs cljs.core/Var)
-            (= :multi-line nt) #?(:clj java.lang.String
-                                  :cljs js/String)
-            (and (= :token (tag node)) (node/sexpr-able? node))
-            (type (node/sexpr node))))))
+  [{:keys [lang]
+    :or   {lang #?(:clj :clj
+                   :cljs :cljs)}
+    :as   node}]
+  (let [nt (node-type node)] (get-in platform-classes [nt lang])))
 
+;; if the nodes are supposed to be optionally enriched with platform-specific
+;; information, then HTML data attributes are a good way to do that.
+;; (still annotate literal keywords, symbols, and vars with the values, though)
+
+
+;; I think there should be a way to either augment or replace the default
+;; classes
+;; :classes key - augment defaults
+;; :class-name key - override defaults (including language-clojure)
 (defn node-attributes
   "Get the HTML element attributes for the given form.
 
   Allows passing through arbitrary attributes (apart from the :class attr)."
-  ([node
-    {:keys [class-name]
-     :as   attrs
-     :or   {class-name (node-html-classes (node-type node))}}]
-   (let [nt (node-type node)]
-     (merge {:class (str "language-clojure " class-name)}
-            #?(:clj {:data-java-class (.getName (node-class node))}
-               :cljs nil)
+  ([node {:keys [class-name classes] :as attrs}]
+   (let [nt (node-type node)
+         nc (node-class node)
+         node-class-name (node-html-classes nt)]
+     (merge {:class (or class-name
+                        (str "language-clojure"
+                             " "
+                             node-class-name
+                             (when classes (str " " (str/join " " classes)))))}
+            #?(:clj {:data-java-class (str nc)}
+               :cljs {:data-js-class (str nc)})
             (when (= :symbol nt) {:data-clojure-symbol (str node)})
             (when (= :keyword nt) {:data-clojure-keyword (str node)})
             (when (= :var nt) {:data-clojure-var (str node)})
-            (dissoc attrs :class-name :class))))
+            (dissoc attrs :class-name :class :classes))))
   ([node] (node-attributes node {})))
+
+(comment
+  (node-type (node/string-node ["line1" "line2"]))
+  (node-attributes (node/coerce (var str)) {:classes ["c1 c2"]})
+  (node-class (node/coerce (var str))))
 
 (defn token->span
   ([node attrs]
-   (let [t (token-type node)]
+   (let [t (literal-type node)]
      (let [h [:span (node-attributes node attrs)]]
        (if (= :string t)
          (apply conj h (interpose [:br] (:lines node)))
          (conj h (str node))))))
   ([node] (token->span node {})))
-
-(comment
-  (node-class (p/parse-string "\"abc
-def
-ghi\""))
-  (node-class (node/coerce (var str)))
-  (node-class (node/coerce #'str))
-  (type 3)
-  (str (node/coerce 3))
-  (token-type (node/coerce "str"))
-  (str (node/coerce 'test))
-  (node/type)
-  (3 4)
-  5)
 
 
 
@@ -275,6 +297,11 @@ ghi\""))
              [:span {:class "language-clojure var-name"} var-name])
        [:span {:class "language-clojure var-name"} var-name])]))
 
+;; if the multimethods are going to be implemented in terms of these
+;; defaults,
+;; then it's not clear how to "swap in" the multimethod version
+;; and if they're not, then it feels like there's two separate
+;; implementations
 
 
 (defn ->span

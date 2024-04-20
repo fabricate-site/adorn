@@ -11,37 +11,51 @@
 (t/deftest attributes
   (t/testing "HTML attributes"
     (t/is (= {:class "language-clojure string"
-              #?@(:clj [:data-java-class "java.lang.String"])}
+              #?@(:clj [:data-java-class "java.lang.String"]
+                  :cljs [:data-js-class "js/String"])}
              (forms/node-attributes (node/coerce "abc"))))
-    (t/is (= {:class "language-clojure mystr"
-              #?@(:clj [:data-java-class "java.lang.String"])}
-             (forms/node-attributes (node/coerce "abc") {:class-name "mystr"}))
+    (t/is (= {:class "language-clojure string mystr"
+              #?@(:clj [:data-java-class "java.lang.String"]
+                  :cljs [:data-js-class "js/String"])}
+             (forms/node-attributes (node/coerce "abc") {:classes ["mystr"]}))
           "Custom HTML class names should be supported")
+    (t/is (= {:class "mystr"
+              #?@(:clj [:data-java-class "java.lang.String"]
+                  :cljs [:data-js-class "js/String"])}
+             (forms/node-attributes (node/coerce "abc") {:class-name "mystr"}))
+          "Class overrides should be supported")
     (t/is (= {:class "language-clojure symbol"
               :data-clojure-symbol "my/sym"
-              #?@(:clj [:data-java-class "clojure.lang.Symbol"])}
+              #?@(:clj [:data-java-class "clojure.lang.Symbol"]
+                  :cljs [:data-js-class "cljs.core/Symbol"])}
              (forms/node-attributes (node/coerce 'my/sym)))
           "Data attributes for symbols should populate")
     (t/is (= {:class "language-clojure keyword"
               :data-clojure-keyword ":kw"
-              #?@(:clj [:data-java-class "clojure.lang.Keyword"])}
+              #?@(:clj [:data-java-class "clojure.lang.Keyword"]
+                  :cljs [:data-js-class "cljs.core/Keyword"])}
              (forms/node-attributes (node/coerce :kw)))
           "Data attributes for keywords should populate")
     ;; TODO: cljs handles vars differently so this needs to be rethought
     (t/is (= {:class "language-clojure var"
               :data-clojure-var #?(:clj "#'clojure.core/str"
                                    :cljs "#'cljs.core/str")
-              #?@(:clj [:data-java-class "clojure.lang.Var"])}
+              #?@(:clj [:data-java-class "clojure.lang.Var"]
+                  :cljs [:data-js-class "cljs.core/Var"])}
              (forms/node-attributes (node/coerce (var str))))
           "Data attributes for vars should populate")))
 
 (t/deftest tokens
   (t/is (= [:span
-            {#?@(:clj [:data-java-class "java.lang.String"]) :class
+            {#?@(:clj [:data-java-class "java.lang.String"]
+                 :cljs [:data-js-class "js/String"])
+             :class
              "language-clojure string"} "str"]
            (forms/token->span (node/string-node "str"))))
   (t/is (= [:span
-            {#?@(:clj [:data-java-class "java.lang.String"]) :class
+            {#?@(:clj [:data-java-class "java.lang.String"]
+                 :cljs [:data-js-class "js/String"])
+             :class
              "language-clojure string multi-line"} "line1" [:br] "line2"]
            (forms/token->span (node/string-node ["line1" "line2"]))))
   (doseq [token     (mapv node/coerce
