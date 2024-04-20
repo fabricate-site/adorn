@@ -130,19 +130,25 @@
                  [1 :class]))))
     (t/is (= "+" (peek (nth (forms/fn->span (p/parse-string "#(+ % 2)")) 4))))))
 
+(defn parse-file
+  [f]
+  #?(:clj (p/parse-file-all f)
+     :cljs (-> (.readFileSync fs f "utf8")
+               p/parse-string-all)))
+
+(defn check-class
+  [f]
+  (if (and (map? f) (contains? f :class))
+    (do (t/is (not (re-find #"unknown" (:class f)))
+              "all forms in source code should be parsed")
+        f)
+    f))
+
 (t/deftest multiforms
-  (let [parsed
-        #?(:clj (p/parse-file-all "test/site/fabricate/adorn/forms_test.cljc")
-           :cljs (-> (.readFileSync fs
-                                    "test/site/fabricate/adorn/forms_test.cljc"
-                                    "utf8")
-                     p/parse-string-all))]
-    (clojure.walk/postwalk (fn [f]
-                             (if (and (map? f) (contains? f :class))
-                               (do (t/is
-                                    (not (re-find #"unknown" (:class f)))
-                                    "all forms in source code should be parsed")
-                                   f)
-                               f))
-                           (forms/->span parsed))
-    (t/is (some? (forms/->span parsed)))))
+  (let [forms-parsed (parse-file "src/site/fabricate/adorn/forms.cljc")
+        test-parsed  (parse-file "test/site/fabricate/adorn/forms_test.cljc")
+        defaults     (atom [])]
+    (t/testing "src files"
+      (clojure.walk/postwalk check-class (forms/->span forms-parsed)))
+    (t/testing "test files"
+      (clojure.walk/postwalk check-class (forms/->span test-parsed)))))

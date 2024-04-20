@@ -41,6 +41,8 @@
 
 ;; this namespace generalizes from "node" to "form"
 
+
+;; TODO: recursively set lang on all subnodes
 (defn ->node
   ([i
     {:keys [lang]
@@ -91,7 +93,8 @@
    :set          "set"
    :newline      "newline"
    :map          "map"
-   :forms        "forms"})
+   :forms        "forms"
+   :reader-macro "reader-cond"})
 
 
 ;; here's one way that you might highlight special keywords or symbols:
@@ -424,7 +427,17 @@
            (:paren/close tokens))))
   ([node] (fn->span node {})))
 
+(defn reader-cond->span
+  ([node attrs]
+   (let [attrs (node-attributes node attrs)]
+     (into [:span attrs (:dispatch tokens)]
+           (map ->span (node/children node))))))
+
 (comment
+  (first (node/children
+          (p/parse-string
+           "#?(:clj [:clj :vec]
+                  :cljs [:cljs :vec])")))
   (str (resolve '+)))
 
 ;; if the multimethods are going to be implemented in terms of these
@@ -457,6 +470,7 @@
        :set          (coll->span node attrs)
        :newline      (newline->span node attrs)
        :map          (coll->span node attrs)
+       :reader-macro (reader-cond->span node attrs)
        :forms        (apply list (map ->span (node/children node)))
        ;; escape hatch: different arity?
        ;; or should it be a dynamic var?
