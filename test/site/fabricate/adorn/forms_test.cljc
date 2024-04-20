@@ -3,6 +3,8 @@
             [rewrite-clj.node :as node]
             [rewrite-clj.parser :as p]
             [clojure.string :as string]
+            #?(:cljs [cljs.reader :as reader])
+            #?(:cljs ["fs" :as fs])
             #?(:clj [clojure.test :as t]
                :cljs [cljs.test :as t])))
 
@@ -43,6 +45,15 @@
                   :cljs [:data-js-class "cljs.core/Var"])}
              (forms/node-attributes (node/coerce (var str))))
           "Data attributes for vars should populate")
+    (let [ws-attrs (forms/node-attributes (p/parse-string "   "))]
+      (t/is (not (or (contains? ws-attrs :data-java-class)
+                     (contains? ws-attrs :data-js-class)))
+            "Whitespace doesn't have a class"))
+    (let [num-node-attrs (forms/node-attributes
+                          (assoc (node/coerce 3) :lang :clj))]
+      (t/is (and (= "java.lang.Number" (:data-java-class num-node-attrs))
+                 (= "language-clojure number" (:class num-node-attrs)))
+            "Number attributes should work"))
     (t/is (= {:class "language-clojure string multi-line"
               :data-java-class "java.lang.String"}
              (forms/node-attributes
@@ -91,4 +102,24 @@
              (get-in (forms/keyword->span (node/coerce :ns/kw)) [1 :class])))
     (t/is (= "language-clojure var"
              (get-in (forms/var->span (node/coerce (var str))) [1 :class]))))
-  (t/testing "composite forms"))
+  (t/testing "composite forms"
+    (t/is (= 11 (count (forms/coll->span (node/coerce (list 1 2 3 4))))))
+    (t/is (= "language-clojure list"
+             (get-in (forms/coll->span (node/coerce (list 1 2 3 4)))
+                     [1 :class])))
+    (t/is (= "language-clojure uneval"
+             (get-in (forms/meta->span (p/parse-string "#_ :meta"))
+                     [1 :class])))
+    (t/is (= "language-clojure meta"
+             (get-in (forms/meta->span (p/parse-string "^:meta sym"))
+                     [1 :class])))))
+
+(t/deftest multiforms
+  (let [parsed
+        #?(:clj (p/parse-file-all "test/site/fabricate/adorn/forms_test.cljc")
+           :cljs (-> (.readFileSync fs
+                                    "test/site/fabricate/adorn/forms_test.cljc"
+                                    "utf8")
+                     p/parse-string-all))]
+    (t/is (some? (forms/->span parsed)))
+    (forms/->span parsed)))
