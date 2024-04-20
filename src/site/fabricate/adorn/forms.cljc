@@ -207,7 +207,10 @@
   "Get the HTML element attributes for the given form.
 
   Allows passing through arbitrary attributes (apart from the :class attr)."
-  ([node {:keys [class-name classes] :as attrs}]
+  ([{:keys [lang]
+     :or   {lang #?(:clj :clj
+                    :cljs :cljs)}
+     :as   node} {:keys [class-name classes] :as attrs}]
    (let [nt (node-type node)
          nc (node-class node)
          node-class-name (node-html-classes nt)]
@@ -216,8 +219,7 @@
                              " "
                              node-class-name
                              (when classes (str " " (str/join " " classes)))))}
-            #?(:clj {:data-java-class (str nc)}
-               :cljs {:data-js-class (str nc)})
+            {(lang {:clj :data-java-class :cljs :data-js-class}) (str nc)}
             (when (= :symbol nt) {:data-clojure-symbol (str node)})
             (when (= :keyword nt) {:data-clojure-keyword (str node)})
             (when (= :var nt) {:data-clojure-var (str node)})

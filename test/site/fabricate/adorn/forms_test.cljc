@@ -36,14 +36,23 @@
                   :cljs [:data-js-class "cljs.core/Keyword"])}
              (forms/node-attributes (node/coerce :kw)))
           "Data attributes for keywords should populate")
-    ;; TODO: cljs handles vars differently so this needs to be rethought
     (t/is (= {:class "language-clojure var"
               :data-clojure-var #?(:clj "#'clojure.core/str"
                                    :cljs "#'cljs.core/str")
               #?@(:clj [:data-java-class "clojure.lang.Var"]
                   :cljs [:data-js-class "cljs.core/Var"])}
              (forms/node-attributes (node/coerce (var str))))
-          "Data attributes for vars should populate")))
+          "Data attributes for vars should populate")
+    (t/is (= {:class "language-clojure string multi-line"
+              :data-java-class "java.lang.String"}
+             (forms/node-attributes
+              (assoc (node/string-node ["a" "b"]) :lang :clj)))
+          "Prefer specified node language (Clojure) to platform default")
+    (t/is
+     (= {:class "language-clojure string multi-line" :data-js-class "js/String"}
+        (forms/node-attributes
+         (assoc (node/string-node ["a" "b"]) :lang :cljs)))
+     "Prefer specified node language (ClojureScript) to platform default")))
 
 (t/deftest tokens
   (t/is (= [:span
