@@ -60,10 +60,6 @@
   ([i] (->node i {})))
 
 
-(comment
-  (node/coerce #'str)
-  (first (node/children (node/coerce #'str))))
-
 (def node-html-classes
   "Default HTML class lookup for node types"
   {:var          "var"
@@ -156,7 +152,9 @@
 
 (defn node-type
   [node]
-  (let [t (tag node)] (if-not (= :token t) t (literal-type node))))
+  (let [t (tag node)]
+    (cond (= :token t) (literal-type node)
+          :default     t)))
 
 (def platform-classes
   "Classes for each platform"
@@ -213,23 +211,7 @@
             (dissoc attrs :class-name :class :classes))))
   ([node] (node-attributes node {})))
 
-(comment
-  (node-type (node/string-node ["line1" "line2"]))
-  (node-attributes (node/coerce (var str)) {:classes ["c1 c2"]})
-  (node-class (node/coerce (var str))))
-
-;; can there be a "plain function" version of the ->hiccup fns for composite
-;; forms?
-;; I guess they could all just accept a map (similar to the multimethod) and
-;; have
-;; defaults as a fallback?
-
-;; they are mutually recursive (a map can be in a vector and a vector can be in
-;; a map)
-;; so the only way to make composite forms work would be by forward declaration
-
 (declare ->span)
-(declare map->span)
 (declare coll->span)
 (declare fn->span)
 
@@ -246,7 +228,7 @@
 (defn symbol->span
   "Generate a Hiccup <span> data structure from the given symbol.
 
-                  Separates the namespace from the symbol, if present."
+  Separates the namespace from the symbol, if present."
   ([node attrs]
    (let [sym      (node/sexpr node)
          sym-ns   (namespace sym)
@@ -263,7 +245,7 @@
 (defn keyword->span
   "Generate a Hiccup <span> data structure from the given keyword node.
 
-                  Separates the namespace from the keyword, if present."
+  Separates the namespace from the keyword, if present."
   ([node attrs]
    (let [kw      (node/sexpr node)
          kw-ns   (namespace kw)
@@ -383,25 +365,6 @@
   (let [attrs (node-attributes node attrs)]
     (into [:span attrs (:deref tokens)] (map ->span (node/children node)))))
 
-
-(comment
-  (into [:a {:class "something"} :b] [1 2 3 4 {5 6}])
-  (into [:a {:class "something"} :b] (list 1 2 3 4 {5 6}))
-  (node-type (node/coerce []))
-  (coll->span (node/coerce [1 2 3 4]))
-  (coll->span (node/coerce {:a 3 :b 9}))
-  (list->span (node/coerce [1 2 3 4]))
-  (meta->span (p/parse-string "^:meta sym"))
-  (quote->span (p/parse-string "'sym") {})
-  (p/parse-string "`(sym ~a)")
-  (newline->span (p/parse-string "
-
-"))
-  (:s (p/parse-string ";; a comment"))
-  (p/parse-string "`(sym ~@[1 2])")
-  (p/parse-string "@my-atom")
-  (node/children (node/coerce (list 1 1 2))))
-
 (defn fn->span
   ([node attrs]
    (let [attrs       (node-attributes node attrs)
@@ -433,18 +396,14 @@
      (into [:span attrs (:dispatch tokens)]
            (map ->span (node/children node))))))
 
-(comment
-  (first (node/children
-          (p/parse-string
-           "#?(:clj [:clj :vec]
-                  :cljs [:cljs :vec])")))
-  (str (resolve '+)))
-
 ;; if the multimethods are going to be implemented in terms of these
 ;; defaults,
 ;; then it's not clear how to "swap in" the multimethod version
 ;; and if they're not, then it feels like there's two separate
 ;; implementations
+
+;; escape hatch: different arity?
+;; or should it be a dynamic var?
 
 (defn ->span
   ([n attrs]
@@ -472,27 +431,19 @@
        :map          (coll->span node attrs)
        :reader-macro (reader-cond->span node attrs)
        :forms        (apply list (map ->span (node/children node)))
-       ;; escape hatch: different arity?
-       ;; or should it be a dynamic var?
        [:span (node-attributes node {:classes ["unknown"]}) (str node)])))
   ([n] (->span n {})))
 
 
-(comment
-  (p/parse-string "^{:mk :mv} [1 2 3]"))
+;; how to specify higher-level forms
+;; needs more design consideration - is it necessary when
+;; data attributes can be used to pattern match on
+;; specific list forms? if there's to be an override mechanism
+;; for special forms, then maybe it should be part of the multimethod
+;; API to keep the forms API simple and fast.
 
 (def form-classes
   "Mapping from form types to HTML classes
 
   Intended for 'higher-level' forms than rewrite-clj supports as node types"
-  {:defn "defn"})
-
-(comment
-  ;; example of annotating a node with the source code type
-  ;; (e.g. clj vs cljs vs bb)
-  (assoc (p/parse-string "#?(:clj \"a\" :cljs \"b\")") :lang :clj)
-  (assoc (p/parse-string ":abc") :lang :clj)
-  (p/parse-string "#_:abc")
-  (tag (p/parse-string-all "[1 2] [2 3]"))
-  (node-html-class (node/coerce 3))
-  (keys (.getMethodTable site.fabricate.adorn.parse/node->hiccup)))
+  {:defn "defn-form" :let "let-form" :ns "ns-form"})

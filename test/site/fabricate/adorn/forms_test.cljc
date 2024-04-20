@@ -128,7 +128,23 @@
                    "#?(:clj [:clj :vec]
                   :cljs [:cljs :vec])"))
                  [1 :class]))))
-    (t/is (= "+" (peek (nth (forms/fn->span (p/parse-string "#(+ % 2)")) 4))))))
+    (t/is (= "+" (peek (nth (forms/fn->span (p/parse-string "#(+ % 2)")) 4)))))
+  (t/testing "special forms"
+    ;; not quite in the sense that Clojure uses the term
+    ;; https://clojure.org/reference/special_forms
+    ;; but close
+    #_(t/is (= :defn
+               (forms/node-type (p/parse-string "(defn ddec [x] (- x 2))")))
+            "defn should be detected by node-type")
+    #_(t/is (= :ns
+               (forms/node-type
+                (p/parse-string
+                 "(ns my.custom.ns (:require '[clojure.string :as str]))"))
+               "ns should be detected by node-type"))
+    #_(t/is (= :let
+               (forms/node-type (p/parse-string
+                                 "(let [bind-sym :abc] (symbol bind-sym))")))
+            "let should be detected by node-type")))
 
 (defn parse-file
   [f]
