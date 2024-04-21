@@ -107,7 +107,7 @@
              (get-in (forms/coll->span (node/coerce (list 1 2 3 4)))
                      [1 :class])))
     (t/is (= "language-clojure uneval"
-             (get-in (forms/meta->span (p/parse-string "#_ :meta"))
+             (get-in (forms/uneval->span (p/parse-string "#_ :meta"))
                      [1 :class])))
     (t/is (= "language-clojure meta"
              (get-in (forms/meta->span (p/parse-string "^:meta sym"))
@@ -128,7 +128,13 @@
                    "#?(:clj [:clj :vec]
                   :cljs [:cljs :vec])"))
                  [1 :class]))))
-    (t/is (= "+" (peek (nth (forms/fn->span (p/parse-string "#(+ % 2)")) 4)))))
+    (t/is (= "+" (peek (nth (forms/fn->span (p/parse-string "#(+ % 2)")) 4))))
+    (t/is (= 5
+             (count (filter #(= % :placeholder)
+                            (forms/->span (node/coerce [1 2 3])
+                                          {}
+                                          (constantly :placeholder)))))
+          "function overrides should work for child nodes"))
   (t/testing "special forms"
     ;; not quite in the sense that Clojure uses the term
     ;; https://clojure.org/reference/special_forms

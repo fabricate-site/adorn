@@ -1,4 +1,5 @@
 (ns site.fabricate.adorn.forms
+  "Base functions for adorn. Less extensible; higher performance."
   (:require [rewrite-clj.node :as node :refer [tag sexpr]]
             [rewrite-clj.parser :as p]
             [rewrite-clj.zip :as z]
@@ -258,7 +259,6 @@
        [:span attrs ":" (escape-html kw-name)])))
   ([node] (keyword->span node {})))
 
-
 (defn whitespace->span
   ([node attrs]
    (let [attrs (node-attributes node attrs)] [:span attrs (:whitespace node)]))
@@ -312,47 +312,57 @@
    :map    [(:brace/open tokens) (:brace/close tokens)]})
 
 (defn coll->span
-  ([node attrs]
+  ([node attrs subform-fn]
    (let [nt          (node-type node)
          [start end] (get coll-delimiters nt)
          attrs       (node-attributes node attrs)]
-     (conj (into [:span attrs start] (map ->span (node/children node))) end)))
+     (conj (into [:span attrs start] (map subform-fn (node/children node)))
+           end)))
+  ([node attrs] (coll->span node attrs ->span))
   ([node] (coll->span node {})))
 
 (defn uneval->span
-  ([node attrs]
+  ([node attrs subform-fn]
    (let [attrs (node-attributes node attrs)]
      (into [:span attrs (:dispatch tokens) "_"]
-           (map ->span (node/children node)))))
+           (map subform-fn (node/children node)))))
+  ([node attrs] (uneval->span node attrs ->span))
   ([node] (uneval->span node {})))
 
 (defn meta->span
-  ([node attrs]
+  ([node attrs subform-fn]
    (let [attrs (node-attributes node attrs)]
-     (into [:span attrs (:caret tokens)] (map ->span (node/children node)))))
+     (into [:span attrs (:caret tokens)]
+           (map subform-fn (node/children node)))))
+  ([node attrs] (meta->span node attrs ->span))
   ([node] (meta->span node {})))
 
 (defn quote->span
-  ([node attrs]
+  ([node attrs subform-fn]
    (let [attrs (node-attributes node attrs)]
-     (into [:span attrs (:quote tokens)] (map ->span (node/children node)))))
+     (into [:span attrs (:quote tokens)]
+           (map subform-fn (node/children node)))))
+  ([node attrs] (quote->span node attrs ->span))
   ([node] (quote->span node {})))
 
 (defn unquote->span
-  ([node attrs]
+  ([node attrs subform-fn]
    (let [attrs (node-attributes node attrs)
          tag   (tag node)]
      (into (if (= :unquote-splicing tag)
              [:span attrs (:unquote tokens) "@"]
              [:span attrs (:unquote tokens)])
-           (map ->span (node/children node)))))
+           (map subform-fn (node/children node)))))
+  ([node attrs] (unquote->span node attrs ->span))
   ([node] (unquote->span node {})))
 
 (defn syntax-quote->span
-  ([node attrs]
+  ([node attrs subform-fn]
    (let [attrs (node-attributes node attrs)]
      (into [:span attrs (:syntax-quote tokens)]
-           (map ->span (node/children node))))))
+           (map subform-fn (node/children node)))))
+  ([node attrs] (syntax-quote->span node attrs ->span))
+  ([node] (syntax-quote->span node {})))
 
 (defn comment->span
   ([node attrs]
@@ -361,12 +371,16 @@
   ([node] (comment->span node {})))
 
 (defn deref->span
-  [node attrs]
-  (let [attrs (node-attributes node attrs)]
-    (into [:span attrs (:deref tokens)] (map ->span (node/children node)))))
+  ([node attrs subform-fn]
+   (let [attrs (node-attributes node attrs)]
+     (into [:span attrs (:deref tokens)]
+           (map subform-fn (node/children node)))))
+  ([node attrs] (deref->span node attrs ->span))
+  ([node] (deref->span node {})))
+
 
 (defn fn->span
-  ([node attrs]
+  ([node attrs subform-fn]
    (let [attrs       (node-attributes node attrs)
          contents    (node/children node)
          [_ params body] (node/sexpr node)
@@ -386,15 +400,18 @@
                               (fn select [zloc] (symbol? (z/sexpr zloc)))
                               (fn visit [zloc] (z/edit zloc #(get r % %)))))]
      (conj (into [:span attrs (:dispatch tokens) (:paren/open tokens)]
-                 (map ->span (node/children edited-node)))
+                 (map subform-fn (node/children edited-node)))
            (:paren/close tokens))))
+  ([node attrs] (fn->span node attrs ->span))
   ([node] (fn->span node {})))
 
 (defn reader-cond->span
-  ([node attrs]
+  ([node attrs subform-fn]
    (let [attrs (node-attributes node attrs)]
      (into [:span attrs (:dispatch tokens)]
-           (map ->span (node/children node))))))
+           (map subform-fn (node/children node)))))
+  ([node attrs] (reader-cond->span node attrs ->span))
+  ([node] (reader-cond->span node {})))
 
 ;; if the multimethods are going to be implemented in terms of these
 ;; defaults,
@@ -406,32 +423,33 @@
 ;; or should it be a dynamic var?
 
 (defn ->span
-  ([n attrs]
+  ([n attrs subform-fn]
    (let [node (->node n)]
      (case (tag node)
-       :fn           (fn->span node attrs)
-       :meta         (meta->span node attrs)
+       :fn           (fn->span node attrs subform-fn)
+       :meta         (meta->span node attrs subform-fn)
        :multi-line   (token->span node attrs)
        :whitespace   (whitespace->span node attrs)
        :comma        (whitespace->span node
                                        (update attrs :classes conj "comma"))
-       :uneval       (uneval->span node attrs)
-       :vector       (coll->span node attrs)
+       :uneval       (uneval->span node attrs subform-fn)
+       :vector       (coll->span node attrs subform-fn)
        :token        (token->span node attrs)
-       :syntax-quote (syntax-quote->span node attrs)
-       :list         (coll->span node attrs)
+       :syntax-quote (syntax-quote->span node attrs subform-fn)
+       :list         (coll->span node attrs subform-fn)
        :var          (var->span node attrs)
-       :quote        (quote->span node attrs)
-       :unquote      (unquote->span node attrs)
-       :deref        (deref->span node attrs)
+       :quote        (quote->span node attrs subform-fn)
+       :unquote      (unquote->span node attrs subform-fn)
+       :deref        (deref->span node attrs subform-fn)
        :comment      (comment->span node attrs)
        :regex        (token->span node attrs)
-       :set          (coll->span node attrs)
+       :set          (coll->span node attrs subform-fn)
        :newline      (newline->span node attrs)
-       :map          (coll->span node attrs)
-       :reader-macro (reader-cond->span node attrs)
-       :forms        (apply list (map ->span (node/children node)))
+       :map          (coll->span node attrs subform-fn)
+       :reader-macro (reader-cond->span node attrs subform-fn)
+       :forms        (apply list (map subform-fn (node/children node)))
        [:span (node-attributes node {:classes ["unknown"]}) (str node)])))
+  ([n attrs] (->span n attrs ->span))
   ([n] (->span n {})))
 
 
@@ -447,3 +465,11 @@
 
   Intended for 'higher-level' forms than rewrite-clj supports as node types"
   {:defn "defn-form" :let "let-form" :ns "ns-form"})
+
+
+(defn node-form-meta
+  "Get the metadata of the Clojure form contained in the given node.
+
+  Returns nil if node has no metadata or can't be converted to a s-expression."
+  [node]
+  (if (node/sexpr-able? node) (meta (node/sexpr node))))
