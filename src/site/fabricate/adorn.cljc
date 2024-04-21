@@ -32,7 +32,6 @@
   Falls back to defaults defined in `site.fabricate.adorn.forms` namespace for unimplemented values"
   form-type)
 
-
 (defmethod node->hiccup :display/fn
   [node opts]
   (let [display-fn (get opts :display/type)] (display-fn node opts)))
@@ -49,8 +48,8 @@
 
 (defmethod node->hiccup :multi-line
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
-   (forms/token->span node attrs node->hiccup))
-  ([node] (forms/token->span node {} node->hiccup)))
+   (forms/token->span node attrs))
+  ([node] (forms/token->span node {})))
 
 (defmethod node->hiccup :whitespace
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
@@ -59,10 +58,8 @@
 
 (defmethod node->hiccup :comma
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
-   (forms/whitespace->span node
-                           (update attrs :classes conj "comma")
-                           node->hiccup))
-  ([node] (forms/whitespace->span node {:classes ["comma"]} node->hiccup)))
+   (forms/whitespace->span node (update attrs :classes conj "comma")))
+  ([node] (forms/whitespace->span node {:classes ["comma"]})))
 
 (defmethod node->hiccup :uneval
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
@@ -76,8 +73,8 @@
 
 (defmethod node->hiccup :token
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
-   (forms/token->span node attrs node->hiccup))
-  ([node] (forms/token->span node {} node->hiccup)))
+   (forms/token->span node attrs))
+  ([node] (forms/token->span node {})))
 
 (defmethod node->hiccup :syntax-quote
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
@@ -90,9 +87,8 @@
   ([node] (forms/coll->span node {} node->hiccup)))
 
 (defmethod node->hiccup :var
-  ([node {:keys [attrs] :or {attrs {}} :as opts}]
-   (forms/var->span node attrs node->hiccup))
-  ([node] (forms/var->span node node->hiccup)))
+  ([node {:keys [attrs] :or {attrs {}} :as opts}] (forms/var->span node attrs))
+  ([node] (forms/var->span node {})))
 
 (defmethod node->hiccup :quote
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
@@ -141,9 +137,8 @@
 
 (defmethod node->hiccup :forms
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
-   (apply list (map #(node->hiccup % {} node->hiccup) (node/children node))))
-  ([node]
-   (apply list (map #(node->hiccup % {} node->hiccup) (node/children node)))))
+   (apply list (map #(node->hiccup % {}) (node/children node))))
+  ([node] (apply list (map #(node->hiccup % {}) (node/children node)))))
 
 (defmethod node->hiccup :default
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
