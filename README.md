@@ -12,17 +12,19 @@ More broadly, I don't think Clojure should have to rely on other language ecosys
 - [Clygments](https://github.com/bfontaine/clygments) wraps the [Pygments](https://pygments.org/) Python library, which obviously means this library introduces a dependency on Python. 
 
 ## Status
-Pre-alpha. Does not yet have a clear API.
+Pre-alpha. Moving towards a stable API, but does not yet have clearly defined contracts.
+
+The `site.fabricate.adorn.forms` namespace has a fairly complete set of functions that are used as building blocks.
 
 ## Goals
 - [ ] CLJC compatibility; generation of Hiccup forms using:
-  - [ ] Clojure 
-  - [ ] ClojureScript 
+  - [x] Clojure 
+  - [x] ClojureScript 
   - [ ] Babashka
 - [ ] provide sensible defaults and an example of styling using plain CSS
   - [ ] including at least one useful Flexbox example
-- [ ] provide an override mechanism for users who want to display particular forms in special ways
-- [ ] provide an extension mechanism for special symbols (e.g. `def`, `defn`, `def-my-custom-def`)
+- [x] provide an override mechanism for users who want to display particular forms in special ways
+- [x] provide an extension mechanism for special symbols (e.g. `def`, `defn`, `def-my-custom-def`)
 - [ ] compatibility across Hiccup implementations
 
 ## Non-goals
