@@ -39,10 +39,15 @@
   (t/testing "dispatch"
     (t/is (some? (adorn/clj->hiccup :abc {})))
     (t/is (some? (adorn/clj->hiccup [:abc {:a 3} (fn [i] 3)] {})))
-    #_(let [str-hiccup  (adorn/clj->hiccup "^{:display/type :custom} {:a 2}")
-            expr-hiccup (let [m ^{:display/type :custom} {:a 2}]
-                          (adorn/clj->hiccup m))]
-        (t/is (re-find #"custom" (get-in str-hiccup [1 :class]))
+    (let [#_#_str-hiccup (adorn/clj->hiccup "^{:display/type :custom} {:a 2}")
+          expr-hiccup (let [m ^{:display/type :custom} {:a 2}]
+                        (adorn/clj->hiccup m))]
+      #_(t/is (re-find #"custom" (get-in str-hiccup [1 :class]))
               "Dispatch based on :type metadata should work")
-        (t/is (re-find #"custom" (get-in expr-hiccup [1 :class]))
-              "Dispatch based on :type metadata should work"))))
+      (t/is (re-find #"custom" (get-in expr-hiccup [1 :class]))
+            "Dispatch based on :type metadata should work"))))
+
+
+(comment
+  (adorn/clj->hiccup (p/parse-string "[1 2 3]"))
+  (forms/->span (node/meta-node {:ns :kw} {:a 2})))
