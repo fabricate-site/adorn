@@ -73,7 +73,7 @@ An alternative model for dispatch:
 2. using a special keyword like `:root` or `:self*` to set the display type of the top-level form
 3. combining "overrides" and "display type" into a single option
 4. Using a function defined inline
-5. dispatching to a var instead of a keyword
+~~5. dispatching to a var instead of a keyword~~
 
 ### Questions with this approach
 - How can the use of arbitrary inline functions be made safe on the client side?
