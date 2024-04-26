@@ -160,7 +160,3 @@
                   n))]
      (node->hiccup node opts)))
   ([src] (clj->hiccup src {})))
-
-
-(comment
-  (clj->hiccup ^{:k :v} [1 2 2]))
