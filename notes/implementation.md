@@ -54,6 +54,12 @@ this implies that the custom class annotation will live _inside_ the resulting m
 
 but that default perhaps should be questioned - just because rewrite-clj represents metadata nodes as a grouped unit doesn't mean that adorn has to. meta->span could simply return a list with the metadata element followed by the form on which metadata is set.
 
+## an important distinction
+
+A node can _have_ metadata without _being_ a metadata node. Rewrite-clj nodes use metadata to preserve the line and column information for the source strings or files they were parsed from, when this information is present. This distinction suggests that ->node may be able to perform the appropriate dispatch for values that only have the `:display/type` metadata set.
+
+Maintaining this distinction may not be as easy for nodes parsed from files or strings, unless I can intercept or override part of the protocol that parses text into nodes.
+
 ## eliding metadata
 
 A default that hides the complexity from users could be: if `display/type` is the only key in the metadata map for a given node, hide it. Otherwise, show it. The presence or absence of this key could be used to control a `:display-meta?` (or similar) key in the options map for node->meta. That way users can override the default when they want to. I think this idea is worth trying. While it makes the internals of adorn slightly more complex, it makes the interface simpler and easier to use.
