@@ -470,6 +470,6 @@
 (defn node-form-meta
   "Get the metadata of the Clojure form contained in the given node.
 
-  Returns nil if node has no metadata or can't be converted to a s-expression."
+    Returns nil if node has no metadata or can't be converted to a s-expression."
   [node]
   (if (node/sexpr-able? node) (meta (node/sexpr node))))

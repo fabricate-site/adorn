@@ -15,7 +15,7 @@
   `:display/type` can also be a map indicating how child nodes should be handled,
   in which case the `:self*` entry is used for the top-level node."
   ([node opts]
-   (let [form-meta         (forms/node-form-meta node)
+   (let [form-meta         (merge (meta node) (forms/node-form-meta node))
          display-type      (or (get opts :display/type)
                                (get form-meta :display/type))
          self-display-type (or (when (map? display-type) (:self* display-type))
@@ -153,13 +153,14 @@
   "Convert the given Clojure string, expression, or rewrite-clj node to a Hiccup data structure.
 
   Uses the multimethod `site.fabricate.adorn/node->hiccup` for dispatch."
-  ([src
-    {display-type :display/type
-     :or          {display-type (:display/type (meta src))}
-     :as          opts}]
+  ([src opts]
    (let [node (let [n (forms/->node src)]
                 (if-let [sm (meta src)]
                   (with-meta n sm)
                   n))]
      (node->hiccup node opts)))
   ([src] (clj->hiccup src {})))
+
+
+(comment
+  (clj->hiccup ^{:k :v} [1 2 2]))
