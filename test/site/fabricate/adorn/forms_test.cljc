@@ -101,7 +101,7 @@
              (get-in (forms/keyword->span (node/coerce :ns/kw)) [1 :class])))
     (t/is (= "language-clojure var"
              (get-in (forms/var->span (node/coerce (var str))) [1 :class]))))
-  (t/testing "composite forms"
+  (t/testing "composite forms:"
     (t/is (= 11 (count (forms/coll->span (node/coerce (list 1 2 3 4))))))
     (t/is (= "language-clojure list"
              (get-in (forms/coll->span (node/coerce (list 1 2 3 4)))
@@ -134,7 +134,17 @@
                             (forms/->span (node/coerce [1 2 3])
                                           {}
                                           (constantly :placeholder)))))
-          "function overrides should work for child nodes"))
+          "function overrides should work for child nodes")
+    (t/testing "metadata"
+      (let [lifted   (forms/apply-node-metadata (node/coerce ^{:k :v} []))
+            lifted-2 (forms/apply-node-metadata (p/parse-string "^{:k :v} []"))]
+        (t/is (= :vector (node/tag lifted))
+              "Metadata application should yield child node")
+        (t/is (= {:k :v} (meta lifted)) "Metadata should be applied properly")
+        (t/is (contains? (meta lifted-2) :col)
+              "Applied metadata should be merged")
+        (t/is (= :vector
+                 (node/tag (forms/apply-node-metadata (node/coerce []))))))))
   (t/testing "special forms"
     ;; not quite in the sense that Clojure uses the term
     ;; https://clojure.org/reference/special_forms

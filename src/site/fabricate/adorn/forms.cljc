@@ -42,6 +42,18 @@
 
 ;; this namespace generalizes from "node" to "form"
 
+(defn apply-node-metadata
+  "Returns the child node of the given metadata node with the metadata map applied to the node itself rather than the form.
+
+  If passed a non-metadata node, return it as-is."
+  [node]
+  (if (= :meta (tag node))
+    (let [existing-meta (meta node)
+          inner-node    (last (node/children node))
+          meta-map      (node/sexpr (first (node/children node)))]
+      (with-meta inner-node (merge existing-meta meta-map)))
+    node))
+
 
 ;; TODO: recursively set lang on all subnodes
 (defn ->node
