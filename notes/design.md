@@ -99,3 +99,36 @@ Another idea: once a form is generated, I can use `rewrite-clj` to alter it for 
 **Obviously** `adorn` must use itself to document itself.
 
 `cljs` compatibility means that we can create a page that allows users to view the converted hiccup of any Clojure form with no server-side code. A "surprise me" button could generate a random one (using the specs above).
+
+## Metadata
+
+A node can _have_ metadata without _being_ a metadata node. Rewrite-clj nodes use metadata to preserve the line and column information for the source strings or files they were parsed from, when this information is present. This distinction suggests that `->node` may be able to perform the appropriate dispatch for values that only have the `:display/type` metadata set.
+
+Maintaining this distinction may not be as easy for nodes parsed from files or strings, unless I can intercept or override part of the protocol that parses text into nodes.
+
+### Eliding / passing metadata
+
+A default that hides the complexity from users could be: if `display/type` is the only key in the metadata map for a given node, hide it. Otherwise, show it. The presence or absence of this key could be used to control a `:display-meta?` (or similar) key in the options map for node->meta. That way users can override the default when they want to. I think this idea is worth trying. While it makes the internals of adorn slightly more complex, it makes the interface simpler and easier to use.
+
+Here's a potentially general-purpose way of handling this beyond just `adorn` - it would work in other contexts that rely upon passing metadata to `rewrite-clj`.
+
+```clojure
+
+^{:rewrite-clj/node-meta {:display/type :veclist}} [1 2 3 4]
+
+;; results in a vector node with {:display/type :veclist} merged with its other metadata
+
+```
+This could be an escape hatch, allowing forms to pass metadata upward to rewrite-clj so they're set as attributes of the nodes and therefore elided when displaying the results.
+
+I think this is a pragmatic choice before `adorn`'s API has fully stabilized. It could be used as a concrete example to point to in discussions of proposed changes or additions to `rewrite-clj` itself - see below for additional context.
+
+### Metadata discussion on `rewrite-clj` GitHub project
+
+I'm not the only one who has found the default way of handling metadata in rewrite-clj cumbersome - see [Issue 115](https://github.com/clj-commons/rewrite-clj/issues/115). Sogaiu, the author of `tree-sitter-clojure` notes:
+
+> the current tree-sitter-clojure grammar implementation puts metadata inside the things they are supposed to be attached to because i found working with rewrite-clj cumbersome wrt metadata
+
+There has also been an idea for [node skipping](https://github.com/clj-commons/rewrite-clj/blob/main/doc/design/custom-node-skipping.adoc), which could potentially be used to "step into" metadata nodes and rewrite them using the child elements. This method would be another way of achieving a similar result. However, there are two main limitiations:
+1. custom node skipping is not yet implemented; it is just an idea.
+2. it relies heavily on the zipper API, which `adorn` does not currently use.
