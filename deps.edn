@@ -16,7 +16,8 @@
                                                              "1.0.353"}}
                    :extra-paths ["dev"]}
            :test  {:exec-fn cognitect.test-runner.api/test
-                   :extra-deps {io.github.cognitect-labs/test-runner
+                   :extra-deps {com.taoensso/tufte     {:mvn/version "2.6.3"}
+                                io.github.cognitect-labs/test-runner
                                 {:git/url
                                  "https://github.com/cognitect-labs/test-runner"
                                  :sha

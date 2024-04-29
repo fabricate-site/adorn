@@ -15,3 +15,4 @@ pom.xml.asc
 generated/
 /.shadow-cljs/
 /node_modules/
+test-resources/clojure-core.clj

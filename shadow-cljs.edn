@@ -1,5 +1,5 @@
 {:builds {:test {:autorun   true
-                 :ns-regexp "(forms|adorn-test)"
+                 :ns-regexp "(forms|adorn-test|performance)"
                  :output-to "generated/node-tests.js"
                  :target    :node-test}}
  :deps   {:aliases [:cljs :test]}}
