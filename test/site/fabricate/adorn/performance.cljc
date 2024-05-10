@@ -60,4 +60,6 @@
 ;; grand scheme of things: 170ms on average to parse and convert a
 ;; 8KLoC file
 
+;; reminder: measure pure-fn performance alongside multimethods
+
 ;; idea: use multimethods/fn to pass in a memoized version and see how much that improves performance
