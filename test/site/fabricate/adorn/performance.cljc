@@ -59,3 +59,5 @@
 ;; however, performance is pretty reasonable for such a huge file in the
 ;; grand scheme of things: 170ms on average to parse and convert a
 ;; 8KLoC file
+
+;; idea: use multimethods/fn to pass in a memoized version and see how much that improves performance
