@@ -48,13 +48,14 @@
 (t/add-basic-println-handler! {})
 
 (t/profile {}
-  (dotimes [_ 100]
+  (dotimes [_ #?(:clj 100
+                 :cljs 15)]
     (t/p :core-parse (parser/parse-string-all clj-core))
     (t/p :core-parse+adorn (adorn/clj->hiccup clj-core))
     (t/p :parsed+adorn (adorn/clj->hiccup core-parsed))
     (t/p :sexprs+adorn (adorn/clj->hiccup core-sexprs))))
 
-;; mean execution time just to parse the string is 59ms, which already
+;; mean execution time (JVM) just to parse the string is 59ms, which already
 ;; puts highlighting core.clj at 60 FPS outside the realm of possibility.
 ;; however, performance is pretty reasonable for such a huge file in the
 ;; grand scheme of things: 170ms on average to parse and convert a
