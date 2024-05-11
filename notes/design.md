@@ -123,6 +123,8 @@ This could be an escape hatch, allowing forms to pass metadata upward to rewrite
 
 I think this is a pragmatic choice before `adorn`'s API has fully stabilized. It could be used as a concrete example to point to in discussions of proposed changes or additions to `rewrite-clj` itself - see below for additional context.
 
+Another idea worth considering: `:node-type` as top level metadata that automatically gets elided and applied to the form after parsing, instead of making users repeatedly go through two hops: `:rewrite-clj/node-meta`and `:display/type` - ergonomics are important to consider here.
+
 ### Metadata discussion on `rewrite-clj` GitHub project
 
 I'm not the only one who has found the default way of handling metadata in rewrite-clj cumbersome - see [Issue 115](https://github.com/clj-commons/rewrite-clj/issues/115). Sogaiu, the author of `tree-sitter-clojure` notes:
