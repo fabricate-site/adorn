@@ -48,12 +48,18 @@
 (t/add-basic-println-handler! {})
 
 (t/profile {}
-  (dotimes [_ #?(:clj 100
-                 :cljs 15)]
-    (t/p :core-parse (parser/parse-string-all clj-core))
-    (t/p :core-parse+adorn (adorn/clj->hiccup clj-core))
-    (t/p :parsed+adorn (adorn/clj->hiccup core-parsed))
-    (t/p :sexprs+adorn (adorn/clj->hiccup core-sexprs))))
+           (dotimes [_ #?(:clj 50
+                          :cljs 15)]
+             (t/p :core-parse (parser/parse-string-all clj-core))
+             (t/p :multimethod/core-parse+adorn (adorn/clj->hiccup clj-core))
+             (t/p :multimethod/parsed+adorn (adorn/clj->hiccup core-parsed))
+             (t/p :multimethod/sexprs+adorn (adorn/clj->hiccup core-sexprs))
+             (t/p :fn/core-parse+adorn
+                  (-> clj-core
+                      parser/parse-string-all
+                      forms/->span))
+             (t/p :fn/parsed+adorn (forms/->span core-parsed))
+             (t/p :fn/sexprs+adorn (forms/->span core-sexprs))))
 
 ;; mean execution time (JVM) just to parse the string is 59ms, which already
 ;; puts highlighting core.clj at 60 FPS outside the realm of possibility.
@@ -61,6 +67,5 @@
 ;; grand scheme of things: 170ms on average to parse and convert a
 ;; 8KLoC file
 
-;; reminder: measure pure-fn performance alongside multimethods
-
-;; idea: use multimethods/fn to pass in a memoized version and see how much that improves performance
+;; idea: use multimethods/fn to pass in a memoized version and see how much
+;; that improves performance
