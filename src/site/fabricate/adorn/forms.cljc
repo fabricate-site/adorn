@@ -425,15 +425,6 @@
   ([node attrs] (reader-cond->span node attrs ->span))
   ([node] (reader-cond->span node {})))
 
-;; if the multimethods are going to be implemented in terms of these
-;; defaults,
-;; then it's not clear how to "swap in" the multimethod version
-;; and if they're not, then it feels like there's two separate
-;; implementations
-
-;; escape hatch: different arity?
-;; or should it be a dynamic var?
-
 (defn ->span
   ([n attrs subform-fn]
    (let [node (->node n)]
