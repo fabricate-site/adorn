@@ -1,5 +1,8 @@
-{:builds {:test {:autorun   true
-                 :ns-regexp "(forms|adorn-test|performance)"
-                 :output-to "generated/node-tests.js"
-                 :target    :node-test}}
+{:builds {:test {:autorun          true
+                 :compiler-options {:static-fns false}
+                 :devtools         {:ignore-warnings true
+                                    #_{:fn-deprecated true}}
+                 :ns-regexp        "(forms|adorn-test|performance)"
+                 :output-to        "generated/node-tests.js"
+                 :target           :node-test}}
  :deps   {:aliases [:cljs :test]}}

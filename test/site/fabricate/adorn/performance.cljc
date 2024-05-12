@@ -67,5 +67,21 @@
 ;; grand scheme of things: 170ms on average to parse and convert a
 ;; 8KLoC file
 
-;; idea: use multimethods/fn to pass in a memoized version and see how much
-;; that improves performance
+
+(t/profile {}
+           (dotimes [_ #?(:clj 50
+                          :cljs 15)]
+             ;; re-memoize ->span each iteration to make sure each test
+             ;; is under identical conditions
+             (with-redefs [forms/->span (memoize forms/->span)]
+               (t/p :memoized/core-parse+adorn
+                    (-> clj-core
+                        parser/parse-string-all
+                        forms/->span))
+               (t/p :memoized/parsed+adorn (forms/->span core-parsed))
+               (t/p :memoized/sexprs+adorn (forms/->span core-sexprs)))))
+
+;; 90th percentile performance for the pre-parsed core.clj code
+;; is 16ms - which is roughly 60FPS. In cljs it's 26ms, which is
+;; a little over 30FPS. That's pretty good for code that is otherwise
+;; fairly unoptimized.
