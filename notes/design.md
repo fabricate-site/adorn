@@ -125,6 +125,8 @@ I think this is a pragmatic choice before `adorn`'s API has fully stabilized. It
 
 Another idea worth considering: `:node-type` as top level metadata that automatically gets elided and applied to the form after parsing, instead of making users repeatedly go through two hops: `:rewrite-clj/node-meta`and `:display/type` - ergonomics are important to consider here.
 
+An idea that may or may not be good: a specific reader conditional for rewrite-clj nodes that can both set metadata and `assoc` keys into the node object.
+
 ### Metadata discussion on `rewrite-clj` GitHub project
 
 I'm not the only one who has found the default way of handling metadata in rewrite-clj cumbersome - see [Issue 115](https://github.com/clj-commons/rewrite-clj/issues/115). Sogaiu, the author of `tree-sitter-clojure` notes:
