@@ -123,9 +123,10 @@ This could be an escape hatch, allowing forms to pass metadata upward to rewrite
 
 I think this is a pragmatic choice before `adorn`'s API has fully stabilized. It could be used as a concrete example to point to in discussions of proposed changes or additions to `rewrite-clj` itself - see below for additional context.
 
-Another idea worth considering: `:node-type` as top level metadata that automatically gets elided and applied to the form after parsing, instead of making users repeatedly go through two hops: `:rewrite-clj/node-meta`and `:display-type` - ergonomics are important to consider here. However, these should be equivalent: the shorthand should "expand" into the longhand. This may be easier to accomplish with namespaced keywords: `:node/display-type` expands into `:display-type`. This can offer a more general mechanism for adding node-level metadata 
+Another idea worth considering: `:node-type` as top level metadata that automatically gets elided and applied to the form after parsing, instead of making users repeatedly go through two hops: `:rewrite-clj/node-meta`and `:display-type` - ergonomics are important to consider here. However, these should be equivalent: the shorthand should "expand" into the longhand. This may be easier to accomplish with namespaced keywords: `:node/display-type` expands into `:display-type`. This can offer a more general mechanism for adding node-level metadata.
 
 An idea that may or may not be good: a specific reader conditional for rewrite-clj nodes that can both set metadata and `assoc` keys into the node object.
+
 
 ### Metadata discussion on `rewrite-clj` GitHub project
 
@@ -136,3 +137,13 @@ I'm not the only one who has found the default way of handling metadata in rewri
 There has also been an idea for [node skipping](https://github.com/clj-commons/rewrite-clj/blob/main/doc/design/custom-node-skipping.adoc), which could potentially be used to "step into" metadata nodes and rewrite them using the child elements. This method would be another way of achieving a similar result. However, there are two main limitiations:
 1. custom node skipping is not yet implemented; it is just an idea.
 2. it relies heavily on the zipper API, which `adorn` does not currently use.
+
+### From metadata to data
+
+If metadata is used this regularly, maybe I should just reify it as data. It is easy to `assoc` additional keys into a `Node`. This means defining a data model and convention for additional keys that `adorn` adds to nodes. Initial ideas:
+
+- `:display-type` - how to display the node
+- `:lang` - the language (`:clj`, `:cljs`)
+- `:src-info` - the metadata resulting from parsing: `:row`, `:col`, `:end-row`, `:end-col`
+
+`:display-type` and `:lang` can both be overridden using the above `:node` prefix convention: `:node/display-type` and `:node/lang`. `:src-info` should not be overridden.
