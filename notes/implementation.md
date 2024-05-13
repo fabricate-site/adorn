@@ -48,7 +48,7 @@ I think the potential for confusion here is pretty high. this aspect of the API 
 Here's one idea of how it might work - this requires writing the custom dispatch in a
 pretty structured way.
 
-if there is a metadata node with the `:display/type` key, the _last child_ node of that node should inherit the :display/type key from the metadata node.
+if there is a metadata node with the `:display-type` key, the _last child_ node of that node should inherit the :display-type key from the metadata node.
 
 this implies that the custom class annotation will live _inside_ the resulting metadata span element rather than at the top level of that form, because of the way that they are grouped together.
 

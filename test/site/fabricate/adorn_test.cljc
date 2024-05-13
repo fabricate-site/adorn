@@ -16,7 +16,7 @@
     (apply list (map custom-dispatch (node/children node)))
     (let [form-meta (forms/node-form-meta node)]
       ;; example elision of adorn-specific metadata
-      (if (contains? :display/type form-meta)
+      (if (contains? form-meta :display-type)
         ;; TODO: investigate first/peek further
         (let [child-node  (last (node/children node))
               node-tag    (node/tag child-node)
@@ -59,19 +59,19 @@
   (t/testing "node info + metadata"
     (t/is (= :custom
              (adorn/form-type (forms/->node
-                               "^{:display/type :custom} {:a 2}"))))
+                               "^{:display-type :custom} {:a 2}"))))
     (t/is (= :custom
-             (adorn/form-type (forms/->node ^{:display/type :custom} {:a 2})))))
+             (adorn/form-type (forms/->node ^{:display-type :custom} {:a 2})))))
   (t/testing "dispatch"
     (t/is (some? (adorn/clj->hiccup :abc {})))
     (t/is (some? (adorn/clj->hiccup [:abc {:a 3} (fn [i] 3)] {})))
     ;; TODO: why do these have a missing caret?
     (let [str-hiccup    (adorn/clj->hiccup (p/parse-string
-                                            "^{:display/type :custom} {:a 2}"))
-          str-hiccup-2  (adorn/clj->hiccup "^{:display/type :custom} {:a 2}")
-          expr-hiccup   (let [m ^{:display/type :custom} {:a 2}]
+                                            "^{:display-type :custom} {:a 2}"))
+          str-hiccup-2  (adorn/clj->hiccup "^{:display-type :custom} {:a 2}")
+          expr-hiccup   (let [m ^{:display-type :custom} {:a 2}]
                           (adorn/clj->hiccup m))
-          expr-hiccup-2 (adorn/clj->hiccup :kw {:display/type :custom})]
+          expr-hiccup-2 (adorn/clj->hiccup :kw {:display-type :custom})]
       (t/is (re-find #"custom" (get-in str-hiccup [1 :class]))
             "Dispatch based on :type metadata should work")
       (t/is (re-find #"custom" (get-in (first str-hiccup-2) [1 :class] ""))

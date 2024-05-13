@@ -10,14 +10,14 @@
 (defn form-type
   "Get the type of the node for display, defaulting to the tag returned by `forms/node-type`.
 
-  If `^{:display/type :custom-type}` metadata has been set on the form, return the type.
-  `:display/type` passed as an option in the options map takes precedence over metadata.
-  `:display/type` can also be a map indicating how child nodes should be handled,
+  If `^{:display-type :custom-type}` metadata has been set on the form, return the type.
+  `:display-type` passed as an option in the options map takes precedence over metadata.
+  `:display-type` can also be a map indicating how child nodes should be handled,
   in which case the `:self*` entry is used for the top-level node."
   ([node opts]
    (let [form-meta         (merge (meta node) (forms/node-form-meta node))
-         display-type      (or (get opts :display/type)
-                               (get form-meta :display/type))
+         display-type      (or (get opts :display-type)
+                               (get form-meta :display-type))
          self-display-type (or (when (map? display-type) (:self* display-type))
                                display-type)]
      (cond (keyword? self-display-type) self-display-type
@@ -34,7 +34,7 @@
 
 (defmethod node->hiccup :display/fn
   [node opts]
-  (let [display-fn (get opts :display/type)] (display-fn node opts)))
+  (let [display-fn (get opts :display-type)] (display-fn node opts)))
 
 (defmethod node->hiccup :fn
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
@@ -147,7 +147,7 @@
 
 
 (comment
-  (form-type (forms/->node "^{:display/type :custom} {:a 2}")))
+  (form-type (forms/->node "^{:display-type :custom} {:a 2}")))
 
 (defn clj->hiccup
   "Convert the given Clojure string, expression, or rewrite-clj node to a Hiccup data structure.
