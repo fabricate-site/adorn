@@ -9,6 +9,18 @@
                :cljs [cljs.test :as t])))
 
 
+(t/deftest node-data
+  (t/testing "node data lifting"
+    (t/is (= :custom
+             (:display-type (forms/node-data (with-meta
+                                               (p/parse-string-all ":abc")
+                                               {:node/display-type :custom
+                                                :node/attr         :val})))))
+    (t/is (contains? (forms/->node (with-meta (p/parse-string-all ":abc")
+                                     {:node/display-type :custom
+                                      :node/attr         :val}))
+                     :display-type))
+    (t/is (= :clj (:lang (forms/->node :abc {:lang :clj}))))))
 
 (t/deftest attributes
   (t/testing "HTML attributes"
@@ -144,7 +156,9 @@
         (t/is (contains? (meta lifted-2) :col)
               "Applied metadata should be merged")
         (t/is (= :vector
-                 (node/tag (forms/apply-node-metadata (node/coerce []))))))))
+                 (node/tag (forms/apply-node-metadata (node/coerce []))))))
+      ;; metadata take 2
+      (t/is (= :custom (forms/node-form-meta)))))
   (t/testing "special forms"
     ;; not quite in the sense that Clojure uses the term
     ;; https://clojure.org/reference/special_forms

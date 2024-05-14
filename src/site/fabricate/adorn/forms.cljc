@@ -55,6 +55,21 @@
     node))
 
 
+(defn node-meta
+  [val-meta]
+  (reduce-kv (fn rename-node-k [m k v]
+               (if (= "node" (namespace k)) (assoc m (keyword (name k)) v) m))
+             (select-keys val-meta [:row :col :end-row :end-col])
+             val-meta))
+
+(defn node-data
+  ([v opts]
+   (merge (node-meta (meta v)) (select-keys opts [:display-type :lang])))
+  ([v] (node-data v {})))
+
+
+(node-data (p/parse-string-all ":abc"))
+
 ;; TODO: recursively set lang on all subnodes
 (defn ->node
   ([i
@@ -63,14 +78,26 @@
      ;; default to platform lang if not provided
      :or   {lang #?(:clj :clj
                     :cljs :cljs)}}]
-   (cond
-     ;; if it's a node, return it as-is
-     (node/node? i) (if (contains? i :lang) i (assoc i :lang lang))
-     ;; if it's a string, parse it
-     (string? i)    (assoc (p/parse-string-all i) :lang lang)
-     ;; otherwise, assume it's a form and coerce it
-     :default       (assoc (node/coerce i) :lang lang)))
+   (let [data          (node-data i opts)
+         val-node      (cond
+                         ;; if it's a node, return it as-is
+                         (node/node? i) i
+                         ;; if it's a string, parse it
+                         (string? i)    (p/parse-string-all i)
+                         ;; otherwise, assume it's a form and coerce it
+                         :default       (node/coerce i))
+         val-node-meta (meta val-node)]
+     (merge val-node
+            data
+            (select-keys val-node-meta [:row :col :end-row :end-col]))))
   ([i] (->node i {})))
+
+
+(comment
+  (->node ":abc")
+  (->node :abc {:lang :clj})
+  (->node ^{:node/display-type :custom :node/attr :val}
+          (p/parse-string-all ":abc")))
 
 
 (def node-html-classes
@@ -145,14 +172,14 @@
        :cljs [js/Number :number js/String :string])})
 
 
-;; the above lookup map may be "too clever" -
+  ;; the above lookup map may be "too clever" -
 ;; just going with (number? v) seems better
 ;; that platform info can be added later if it's present
 
 (defn literal-type
   "Return the literal type for the given token node.
 
-  Intended to be consistent across clj+cljs."
+                              Intended to be consistent across clj+cljs."
   [node]
   (cond (:lines node) :string
         (:k node) :keyword
@@ -183,7 +210,7 @@
    :list       {:clj 'clojure.lang.PersistentList :cljs 'cljs.core/List}})
 
 
-;; TODO: make this static with dynamic fallback
+  ;; TODO: make this static with dynamic fallback
 (defn node-class
   [{:keys [lang]
     :or   {lang #?(:clj :clj
@@ -191,19 +218,20 @@
     :as   node}]
   (let [nt (node-type node)] (get-in platform-classes [nt lang])))
 
-;; if the nodes are supposed to be optionally enriched with platform-specific
-;; information, then HTML data attributes are a good way to do that.
-;; (still annotate literal keywords, symbols, and vars with the values, though)
+  ;; if the nodes are supposed to be optionally enriched with platform-specific
+  ;; information, then HTML data attributes are a good way to do that.
+  ;; (still annotate literal keywords, symbols, and vars with the values,
+  ;; though)
 
 
-;; I think there should be a way to either augment or replace the default
-;; classes
-;; :classes key - augment defaults
-;; :class-name key - override defaults (including language-clojure)
+  ;; I think there should be a way to either augment or replace the default
+  ;; classes
+  ;; :classes key - augment defaults
+  ;; :class-name key - override defaults (including language-clojure)
 (defn node-attributes
   "Get the HTML element attributes for the given form.
 
-  Allows passing through arbitrary attributes (apart from the :class attr)."
+                              Allows passing through arbitrary attributes (apart from the :class attr)."
   ([{:keys [lang]
      :or   {lang #?(:clj :clj
                     :cljs :cljs)}
@@ -241,7 +269,7 @@
 (defn symbol->span
   "Generate a Hiccup <span> data structure from the given symbol.
 
-  Separates the namespace from the symbol, if present."
+                              Separates the namespace from the symbol, if present."
   ([node attrs]
    (let [sym      (node/sexpr node)
          sym-ns   (namespace sym)
@@ -258,7 +286,7 @@
 (defn keyword->span
   "Generate a Hiccup <span> data structure from the given keyword node.
 
-  Separates the namespace from the keyword, if present."
+                              Separates the namespace from the keyword, if present."
   ([node attrs]
    (let [kw      (node/sexpr node)
          kw-ns   (namespace kw)
@@ -476,3 +504,13 @@
     Returns nil if node has no metadata or can't be converted to a s-expression."
   [node]
   (if (node/sexpr-able? node) (meta (node/sexpr node))))
+
+
+
+(defn apply-meta
+  [v]
+  (let [val-meta (meta v) val-node-meta (get-node-meta val-meta)]))
+
+
+(comment
+  (meta (p/parse-string "{:a :b}")))
