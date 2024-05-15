@@ -10,14 +10,15 @@
 (defn form-type
   "Get the type of the node for display, defaulting to the tag returned by `forms/node-type`.
 
-  If `^{:display-type :custom-type}` metadata has been set on the form, return the type.
-  `:display-type` passed as an option in the options map takes precedence over metadata.
+  If `{:display-type :custom-type}` data has been added to the form, return the type.
+  `:display-type` passed as an option in the options map takes precedence over existing node data.
   `:display-type` can also be a map indicating how child nodes should be handled,
   in which case the `:self*` entry is used for the top-level node."
   ([node opts]
    (let [form-meta         (merge (meta node) (forms/node-form-meta node))
          display-type      (or (get opts :display-type)
-                               (get form-meta :display-type))
+                               (get node :display-type)
+                               (forms/node-type node))
          self-display-type (or (when (map? display-type) (:self* display-type))
                                display-type)]
      (cond (keyword? self-display-type) self-display-type

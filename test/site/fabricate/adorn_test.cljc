@@ -14,19 +14,18 @@
   (if (= :forms (node/tag node))
     ;; this is fine, just pass in the options
     (apply list (map custom-dispatch (node/children node)))
-    (let [form-meta (forms/node-form-meta node)]
-      ;; example elision of adorn-specific metadata
-      (if (contains? form-meta :display-type)
-        ;; TODO: investigate first/peek further
-        (let [child-node  (last (node/children node))
-              node-tag    (node/tag child-node)
-              tag-method  (get-method adorn/node->hiccup node-tag)
-              node-hiccup (tag-method node)]
-          (update-in node-hiccup [1 :class] str " custom-type"))
-        (let [node-tag    (node/tag node)
-              tag-method  (get-method adorn/node->hiccup node-tag)
-              node-hiccup (tag-method node)]
-          (update-in node-hiccup [1 :class] str " custom-type"))))))
+    ;; example elision of adorn-specific metadata
+    (if (contains? node :display-type)
+      ;; TODO: investigate first/peek further
+      (let [child-node  (last (node/children node))
+            node-tag    (node/tag child-node)
+            tag-method  (get-method adorn/node->hiccup node-tag)
+            node-hiccup (tag-method node)]
+        (update-in node-hiccup [1 :class] str " custom-type"))
+      (let [node-tag    (node/tag node)
+            tag-method  (get-method adorn/node->hiccup node-tag)
+            node-hiccup (tag-method node)]
+        (update-in node-hiccup [1 :class] str " custom-type")))))
 
 ;; ultimately this likely means providing a convenience higher-order
 ;; function to make it easier for users to dispatch "the right way"
@@ -58,10 +57,10 @@
 (t/deftest api
   (t/testing "node info + metadata"
     (t/is (= :custom
-             (adorn/form-type (forms/->node
-                               "^{:display-type :custom} {:a 2}"))))
+             (adorn/form-type (forms/->node "{:a 2}" {:display-type :custom}))))
     (t/is (= :custom
-             (adorn/form-type (forms/->node ^{:display-type :custom} {:a 2})))))
+             (adorn/form-type (forms/->node ^{:node/display-type :custom}
+                                            {:a 2})))))
   (t/testing "dispatch"
     (t/is (some? (adorn/clj->hiccup :abc {})))
     (t/is (some? (adorn/clj->hiccup [:abc {:a 3} (fn [i] 3)] {})))
@@ -69,7 +68,7 @@
     (let [str-hiccup    (adorn/clj->hiccup (p/parse-string
                                             "^{:display-type :custom} {:a 2}"))
           str-hiccup-2  (adorn/clj->hiccup "^{:display-type :custom} {:a 2}")
-          expr-hiccup   (let [m ^{:display-type :custom} {:a 2}]
+          expr-hiccup   (let [m ^{:node/display-type :custom} {:a 2}]
                           (adorn/clj->hiccup m))
           expr-hiccup-2 (adorn/clj->hiccup :kw {:display-type :custom})]
       (t/is (re-find #"custom" (get-in str-hiccup [1 :class]))

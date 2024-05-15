@@ -11,6 +11,13 @@
 
 (t/deftest node-data
   (t/testing "node data lifting"
+    (comment
+      ;; it doesn't matter whether the metadata is set via reader
+      ;; dispatch or added using `with-meta` - the resulting value
+      ;; is the same and it is a MetaNode
+      (let [meta-vec (with-meta [:a] {:node/display-type :custom})]
+        (= (forms/->node meta-vec)
+           (forms/->node ^{:node/display-type :custom} [:a]))))
     (t/is (= :custom
              (:display-type (forms/node-data (with-meta
                                                (p/parse-string-all ":abc")
@@ -20,7 +27,14 @@
                                      {:node/display-type :custom
                                       :node/attr         :val}))
                      :display-type))
-    (t/is (= :clj (:lang (forms/->node :abc {:lang :clj}))))))
+    (t/is (= :clj (:lang (forms/->node :abc {:lang :clj}))))
+    ;; *should* these be coerced into non-metadata nodes?
+    (t/is (= :val (:attr (forms/->node (node/coerce ^{:node/attr :val} [])))))
+    (t/is (= :val
+             (:attr (forms/->node (node/coerce
+                                   (with-meta [] {:node/attr :val}))))))
+    (t/is (= :val (:attr (forms/->node (node/coerce []) {:node/attr :val})))
+          "node data should be set manually if present in the opts")))
 
 (t/deftest attributes
   (t/testing "HTML attributes"
@@ -158,7 +172,7 @@
         (t/is (= :vector
                  (node/tag (forms/apply-node-metadata (node/coerce []))))))
       ;; metadata take 2
-      (t/is (= :custom (forms/node-form-meta)))))
+      #_(t/is (= :custom (forms/node-form-meta)))))
   (t/testing "special forms"
     ;; not quite in the sense that Clojure uses the term
     ;; https://clojure.org/reference/special_forms

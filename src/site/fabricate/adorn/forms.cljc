@@ -64,7 +64,9 @@
 
 (defn node-data
   ([v opts]
-   (merge (node-meta (meta v)) (select-keys opts [:display-type :lang])))
+   (merge (node-meta (meta v))
+          (node-meta opts)
+          (select-keys opts [:display-type :lang])))
   ([v] (node-data v {})))
 
 
@@ -506,10 +508,6 @@
   (if (node/sexpr-able? node) (meta (node/sexpr node))))
 
 
-
-(defn apply-meta
-  [v]
-  (let [val-meta (meta v) val-node-meta (get-node-meta val-meta)]))
 
 
 (comment
