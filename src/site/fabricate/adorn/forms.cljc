@@ -42,6 +42,14 @@
 
 ;; this namespace generalizes from "node" to "form"
 
+;; the approach I landed on here is similar to what clj-kondo does
+;; https://github.com/clj-kondo/clj-kondo/blob/master/src/clj_kondo/impl/metadata.clj
+;; here's how to split the difference (maybe):
+;; lift the metadata with the node prefix
+;; if there's nothing left, return the inner node with the metadata applied
+;; if there is something left, that may be something worth preserving in the
+;; output so then just return a metadata node
+
 (defn apply-node-metadata
   "Returns the child node of the given metadata node with the metadata map applied to the node itself rather than the form.
 

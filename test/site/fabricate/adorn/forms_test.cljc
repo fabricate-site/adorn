@@ -15,9 +15,11 @@
       ;; it doesn't matter whether the metadata is set via reader
       ;; dispatch or added using `with-meta` - the resulting value
       ;; is the same and it is a MetaNode
-      (let [meta-vec (with-meta [:a] {:node/display-type :custom})]
+      (let [meta-vec    (with-meta [:a] {:node/display-type :custom})
+            nested-meta [(with-meta {:a 1} {:node/display-type :custom})]]
         (= (forms/->node meta-vec)
-           (forms/->node ^{:node/display-type :custom} [:a]))))
+           (forms/->node ^{:node/display-type :custom} [:a]))
+        (forms/->node nested-meta)))
     (t/is (= :custom
              (:display-type (forms/node-data (with-meta
                                                (p/parse-string-all ":abc")
