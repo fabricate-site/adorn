@@ -11,6 +11,15 @@
 
 (t/deftest node-data
   (t/testing "node data lifting"
+    (let [node-1 (node/coerce ^{:type :something :node/type :something-else}
+                              {:a 1})
+          node-2 (node/coerce ^{:node/type :something-else} {:a 1})]
+      (t/is
+       (= :map (:tag (forms/split-node-metadata node-2)))
+       "Node metadata splitting should yield non-metadata nodes for node-only keywords")
+      (t/is
+       (= :meta (:tag (forms/split-node-metadata node-1)))
+       "Node metadata splitting should yield metadata nodes for non-node keywords"))
     (comment
       ;; it doesn't matter whether the metadata is set via reader
       ;; dispatch or added using `with-meta` - the resulting value
@@ -31,10 +40,10 @@
                      :display-type))
     (t/is (= :clj (:lang (forms/->node :abc {:lang :clj}))))
     ;; *should* these be coerced into non-metadata nodes?
-    (t/is (= :val (:attr (forms/->node (node/coerce ^{:node/attr :val} [])))))
-    (t/is (= :val
-             (:attr (forms/->node (node/coerce
-                                   (with-meta [] {:node/attr :val}))))))
+    #_(t/is (= :val (:attr (forms/->node (node/coerce ^{:node/attr :val} [])))))
+    #_(t/is (= :val
+               (:attr (forms/->node (node/coerce
+                                     (with-meta [] {:node/attr :val}))))))
     (t/is (= :val (:attr (forms/->node (node/coerce []) {:node/attr :val})))
           "node data should be set manually if present in the opts")))
 

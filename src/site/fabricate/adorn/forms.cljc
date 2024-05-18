@@ -62,6 +62,40 @@
       (with-meta inner-node (merge existing-meta meta-map)))
     node))
 
+(defn split-node-metadata
+  "Rewrites the given node based on the type of metadata it has.
+
+  Metadata keywords beginning with the :node namespace prefix get applied to the node;
+  all other metadata remains with the node itself. If all the metadata begins with the
+  :node prefix, return the inner node with that metadata applied. Otherwise, return a
+  metadata node with the node-specific metadata lifted to the node and the remaining
+  metadata inside the node itself.
+
+  Non-metadata nodes are returned as-is."
+  [node]
+  (if (= :meta (tag node))
+    ;; there needs to be a better way of distinguishing these two things
+    ;; using specific and precise terms for each
+    (let [node-meta         (meta node)
+          form-meta         (node/sexpr (get-in node [:children 0]))
+          updated-node-meta (reduce-kv (fn rename-node-k [m k v]
+                                         (if (= "node" (namespace k))
+                                           (assoc m (keyword (name k)) v)
+                                           m))
+                                       (select-keys node-meta
+                                                    [:row :col :end-row
+                                                     :end-col])
+                                       (merge node-meta form-meta))
+          updated-form-meta (reduce-kv
+                             (fn rm-node-k [m k v]
+                               (if (not= "node" (namespace k)) (assoc m k v) m))
+                             {}
+                             form-meta)]
+      (if (empty? updated-form-meta)
+        (with-meta (first (:children node)) updated-node-meta)
+        (with-meta (assoc-in node [:children 0] (node/coerce updated-form-meta))
+          updated-node-meta)))
+    node))
 
 (defn node-meta
   [val-meta]
