@@ -21,10 +21,10 @@
 
 
 ;; workaround to save and cache the file locally
-#?(:clj (spit "test-resources/clojure-core.clj" (slurp clj-core-url)))
+;; #?(:clj (spit "test-resources/clojure-core.clj" (slurp clj-core-url)))
 
 (def clj-core
-  #?(:clj (slurp clj-core-url)
+  #?(:clj (slurp #_clj-core-url "test-resources/clojure-core.clj")
      :cljs (.readFileSync fs "test-resources/clojure-core.clj" "utf8")))
 
 
@@ -69,17 +69,17 @@
 
 
 (t/profile {}
-           (dotimes [_ #?(:clj 50
-                          :cljs 15)]
-             ;; re-memoize ->span each iteration to make sure each test
-             ;; is under identical conditions
-             (with-redefs [forms/->span (memoize forms/->span)]
-               (t/p :memoized/core-parse+adorn
-                    (-> clj-core
-                        parser/parse-string-all
-                        forms/->span))
-               (t/p :memoized/parsed+adorn (forms/->span core-parsed))
-               (t/p :memoized/sexprs+adorn (forms/->span core-sexprs)))))
+  (dotimes [_ #?(:clj 50
+                 :cljs 15)]
+    ;; re-memoize ->span each iteration to make sure each test
+    ;; is under identical conditions
+    (with-redefs [forms/->span (memoize forms/->span)]
+      (t/p :memoized/core-parse+adorn
+           (-> clj-core
+               parser/parse-string-all
+               forms/->span))
+      (t/p :memoized/parsed+adorn (forms/->span core-parsed))
+      (t/p :memoized/sexprs+adorn (forms/->span core-sexprs)))))
 
 ;; 90th percentile performance for the pre-parsed core.clj code
 ;; is 16ms - which is roughly 60FPS. In cljs it's 26ms, which is
