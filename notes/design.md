@@ -128,6 +128,8 @@ Another idea worth considering: `:node-type` as top level metadata that automati
 An idea that may or may not be good: a specific reader conditional for rewrite-clj nodes that can both set metadata and `assoc` keys into the node object.
 
 
+An idea that may or may not be good: a specific reader conditional for rewrite-clj nodes that can both set metadata and `assoc` keys into the node object.
+
 ### Metadata discussion on `rewrite-clj` GitHub project
 
 I'm not the only one who has found the default way of handling metadata in rewrite-clj cumbersome - see [Issue 115](https://github.com/clj-commons/rewrite-clj/issues/115). Sogaiu, the author of `tree-sitter-clojure` notes:
