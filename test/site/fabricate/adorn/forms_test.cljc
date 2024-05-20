@@ -10,6 +10,11 @@
 
 
 (t/deftest node-data
+  (t/testing "node normalization"
+    (t/is (= :clj
+             (get-in (forms/->node (node/coerce [1 {:a :b}]))
+                     [:children 1 :lang]))
+          "node :lang shoulde be set recursively on all child nodes"))
   (t/testing "node data lifting"
     (let [node-1 (node/coerce ^{:type :something :node/type :something-else}
                               {:a 1})
@@ -35,8 +40,8 @@
                                                {:node/display-type :custom
                                                 :node/attr         :val})))))
     (t/is (contains? (forms/->node (with-meta (p/parse-string-all ":abc")
-                                     {:node/display-type :custom
-                                      :node/attr         :val}))
+                                              {:node/display-type :custom
+                                               :node/attr         :val}))
                      :display-type))
     (t/is (= :clj (:lang (forms/->node :abc {:lang :clj}))))
     ;; *should* these be coerced into non-metadata nodes?

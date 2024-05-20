@@ -114,7 +114,6 @@
 
 (node-data (p/parse-string-all ":abc"))
 
-;; TODO: recursively set lang on all subnodes
 (defn ->node
   ([i
     {:keys [lang]
@@ -131,7 +130,13 @@
                          ;; otherwise, assume it's a form and coerce it
                          :default       (node/coerce i))
          val-node-meta (meta val-node)]
-     (merge val-node
+     (merge (if (:children val-node)
+              (update val-node
+                      :children
+                      (fn update-cns [cns]
+                        (mapv (fn update-cn [cn] (->node cn {:lang lang}))
+                              cns)))
+              val-node)
             data
             (select-keys val-node-meta [:row :col :end-row :end-col]))))
   ([i] (->node i {})))
