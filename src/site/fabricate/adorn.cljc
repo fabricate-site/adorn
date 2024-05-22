@@ -15,9 +15,9 @@
   `:display-type` can also be a map indicating how child nodes should be handled,
   in which case the `:self*` entry is used for the top-level node."
   ([node opts]
-   (let [form-meta         (merge (meta node) (forms/node-form-meta node))
-         display-type      (or (get opts :display-type)
+   (let [display-type      (or (get opts :display-type)
                                (get node :display-type)
+                               (get (meta node) :display-type)
                                (forms/node-type node))
          self-display-type (or (when (map? display-type) (:self* display-type))
                                display-type)]
@@ -155,9 +155,5 @@
 
   Uses the multimethod `site.fabricate.adorn/node->hiccup` for dispatch."
   ([src opts]
-   (let [node (let [n (forms/->node src)]
-                (if-let [sm (meta src)]
-                  (with-meta n sm)
-                  n))]
-     (node->hiccup node opts)))
+   (node->hiccup (forms/->node src) opts))
   ([src] (clj->hiccup src {})))
