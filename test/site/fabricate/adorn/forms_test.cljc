@@ -10,38 +10,33 @@
 
 
 (t/deftest node-data
-  (t/testing "node normalization"
-    (t/is (= :clj
-             (get-in (forms/->node (node/coerce [1 {:a :b}]))
-                     [:children 1 :lang]))
-          "node :lang shoulde be set recursively on all child nodes"))
   (t/testing "node data lifting"
-    (let [node-1 (node/coerce ^{:type :something :node/type :something-else}
-                              {:a 1})
-          node-2 (node/coerce ^{:node/type :something-else} {:a 1})]
+    (let [node-1       (node/coerce
+                        ^{:type :something :node/type :something-else} {:a 1})
+          node-2       (node/coerce ^{:node/type :something-else} {:a 1})
+          str-vec-node (p/parse-string "^{:node/display-type :custom} [:abc]")
+          kw-only      (node/coerce ^:kw [1 2 3])
+          kw-only-str  (p/parse-string "^:kw [1 2 3]")]
+      (t/is
+       (= :vector (:tag (forms/split-node-metadata str-vec-node)))
+       "forms with node-only metadata should be converted to the correct type after splitting")
       (t/is
        (= :map (:tag (forms/split-node-metadata node-2)))
        "Node metadata splitting should yield non-metadata nodes for node-only keywords")
       (t/is
        (= :meta (:tag (forms/split-node-metadata node-1)))
-       "Node metadata splitting should yield metadata nodes for non-node keywords"))
-    (comment
-      ;; it doesn't matter whether the metadata is set via reader
-      ;; dispatch or added using `with-meta` - the resulting value
-      ;; is the same and it is a MetaNode
-      (let [meta-vec    (with-meta [:a] {:node/display-type :custom})
-            nested-meta [(with-meta {:a 1} {:node/display-type :custom})]]
-        (= (forms/->node meta-vec)
-           (forms/->node ^{:node/display-type :custom} [:a]))
-        (forms/->node nested-meta)))
+       "Node metadata splitting should yield metadata nodes for non-node keywords")
+      (let [kw-split (forms/split-node-metadata kw-only-str)]
+        (t/is (= :meta (:tag kw-split))
+              "metadata splitting should work for keyword-only nodes")
+        (t/is (= [:kw [1 2 3]] (node/sexprs (:children kw-split))))))
     (t/is (= :custom
-             (:display-type (forms/node-data (with-meta
-                                               (p/parse-string-all ":abc")
-                                               {:node/display-type :custom
-                                                :node/attr         :val})))))
+             (:display-type (forms/->node (with-meta (p/parse-string-all ":abc")
+                                            {:node/display-type :custom
+                                             :node/attr :val})))))
     (t/is (contains? (forms/->node (with-meta (p/parse-string-all ":abc")
-                                              {:node/display-type :custom
-                                               :node/attr         :val}))
+                                     {:node/display-type :custom
+                                      :node/attr         :val}))
                      :display-type))
     (t/is (= :clj (:lang (forms/->node :abc {:lang :clj}))))
     ;; *should* these be coerced into non-metadata nodes?
@@ -50,7 +45,32 @@
                (:attr (forms/->node (node/coerce
                                      (with-meta [] {:node/attr :val}))))))
     (t/is (= :val (:attr (forms/->node (node/coerce []) {:node/attr :val})))
-          "node data should be set manually if present in the opts")))
+          "node data should be set manually if present in the opts"))
+  (t/testing "node normalization"
+    (t/is (= :clj (:lang (forms/->node (node/coerce "1") {:lang :clj}))))
+    (t/is (= :clj
+             (get-in (forms/->node (node/coerce [1 {:a :b}]))
+                     [:children 1 :lang]))
+          "node :lang shoulde be set recursively for all child nodes")
+    (t/is (= :map
+             (-> (node/coerce [1 {:a :b}])
+                 (forms/->node {:lang :cljs})
+                 :children
+                 last
+                 :tag))
+          "subnodes should have correct types after updating")
+    (t/is (= :custom
+             (-> (node/coerce [1 ^{:node/display-type :custom} {:a :b}])
+                 forms/->node
+                 :children
+                 last
+                 meta
+                 (get :display-type)))
+          "node metadata should be split recursively for all child nodes"))
+  (comment
+    (forms/->node (node/coerce [1 ^{:node/display-type :custom} {:a :b}]))
+    (meta (forms/split-node-metadata (node/coerce ^{:node/display-type :custom}
+                                                  {:a :b})))))
 
 (t/deftest attributes
   (t/testing "HTML attributes"
@@ -111,14 +131,12 @@
   (t/is (= [:span
             {#?@(:clj [:data-java-class "java.lang.String"]
                  :cljs [:data-js-class "js/String"])
-             :class
-             "language-clojure string"} "str"]
+             :class "language-clojure string"} "str"]
            (forms/token->span (node/string-node "str"))))
   (t/is (= [:span
             {#?@(:clj [:data-java-class "java.lang.String"]
                  :cljs [:data-js-class "js/String"])
-             :class
-             "language-clojure string multi-line"} "line1" [:br] "line2"]
+             :class "language-clojure string multi-line"} "line1" [:br] "line2"]
            (forms/token->span (node/string-node ["line1" "line2"]))))
   (doseq [token     (mapv node/coerce
                           [1 1.2
@@ -186,9 +204,7 @@
         (t/is (contains? (meta lifted-2) :col)
               "Applied metadata should be merged")
         (t/is (= :vector
-                 (node/tag (forms/apply-node-metadata (node/coerce []))))))
-      ;; metadata take 2
-      #_(t/is (= :custom (forms/node-form-meta)))))
+                 (node/tag (forms/apply-node-metadata (node/coerce []))))))))
   (t/testing "special forms"
     ;; not quite in the sense that Clojure uses the term
     ;; https://clojure.org/reference/special_forms
@@ -227,4 +243,7 @@
     (t/testing "src files"
       (clojure.walk/postwalk check-class (forms/->span forms-parsed)))
     (t/testing "test files"
-      (clojure.walk/postwalk check-class (forms/->span test-parsed)))))
+      (clojure.walk/postwalk check-class (forms/->span test-parsed)))
+    #_(doseq [form (:children forms-parsed)]
+        (try (forms/->span form)
+             (catch Exception e #_(tap> form) (println form))))))

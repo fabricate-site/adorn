@@ -73,29 +73,51 @@
 
   Non-metadata nodes are returned as-is."
   [node]
-  (if (= :meta (tag node))
-    ;; there needs to be a better way of distinguishing these two things
-    ;; using specific and precise terms for each
+  (if  (= :meta (tag node))
     (let [node-meta         (meta node)
           form-meta         (node/sexpr (get-in node [:children 0]))
-          updated-node-meta (reduce-kv (fn rename-node-k [m k v]
-                                         (if (= "node" (namespace k))
-                                           (assoc m (keyword (name k)) v)
-                                           m))
-                                       (select-keys node-meta
-                                                    [:row :col :end-row
-                                                     :end-col])
-                                       (merge node-meta form-meta))
-          updated-form-meta (reduce-kv
-                             (fn rm-node-k [m k v]
-                               (if (not= "node" (namespace k)) (assoc m k v) m))
-                             {}
-                             form-meta)]
-      (if (empty? updated-form-meta)
-        (with-meta (first (:children node)) updated-node-meta)
+          ;; TODO: decide what to merge with the node itself and what to keep
+          ;; as metadata alone
+          node-data nil
+          updated-node-meta
+          (cond
+            (and (keyword? form-meta) (= "node" (namespace form-meta)))
+            (assoc (select-keys node-meta [:row :col :end-row
+                                           :end-col])
+                   (keyword (name form-meta)) true)
+            (keyword? form-meta) (select-keys node-meta [:row :col :end-row
+                                                         :end-col])
+
+            (map? form-meta)
+            (reduce-kv (fn rename-node-k [m k v]
+                         (if (= "node" (namespace k))
+                           (assoc m (keyword (name k)) v)
+                           m))
+                       (select-keys node-meta
+                                    [:row :col :end-row
+                                     :end-col])
+                       form-meta))
+          updated-form-meta
+          (cond (and (keyword? form-meta) (= "node" (namespace form-meta)))
+                {}
+                (keyword? form-meta) form-meta
+                (map? form-meta)
+                (reduce-kv
+                 (fn rm-node-k [m k v]
+                   (if (not= "node" (namespace k)) (assoc m k v) m))
+                 {}
+                 form-meta))]
+      (if (and (map? updated-form-meta) (empty? updated-form-meta))
+        (with-meta (peek (:children node)) updated-node-meta)
         (with-meta (assoc-in node [:children 0] (node/coerce updated-form-meta))
           updated-node-meta)))
     node))
+
+(comment
+  (split-node-metadata (p/parse-string-all
+                        "^{:node/display-type :custom} [:abc]"))
+  (split-node-metadata (p/parse-string "^{:node/display-type :custom} [:abc]"))
+  (->node (p/parse-string "[^{:node/display-type :custom} [:abc]]")))
 
 (defn node-meta
   [val-meta]
@@ -111,9 +133,7 @@
           (select-keys opts [:display-type :lang])))
   ([v] (node-data v {})))
 
-
-(node-data (p/parse-string-all ":abc"))
-
+;; TODO: should this be called ->form instead?
 (defn ->node
   ([i
     {:keys [lang]
@@ -121,28 +141,32 @@
      ;; default to platform lang if not provided
      :or   {lang #?(:clj :clj
                     :cljs :cljs)}}]
-   (let [data          (node-data i opts)
-         val-node      (cond
-                         ;; if it's a node, return it as-is
-                         (node/node? i) i
-                         ;; if it's a string, parse it
-                         (string? i)    (p/parse-string-all i)
-                         ;; otherwise, assume it's a form and coerce it
-                         :default       (node/coerce i))
-         val-node-meta (meta val-node)]
-     (merge (if (:children val-node)
-              (update val-node
+   (let [node-val (split-node-metadata (cond
+                                         ;; if it's a node, return it as-is
+                                         (node/node? i) i
+                                         ;; if it's a string, parse it
+                                         (string? i)    (p/parse-string-all i)
+                                         ;; otherwise, assume it's a form
+                                         ;; and coerce it
+                                         :default       (node/coerce i)))
+         opts     (assoc opts :lang lang)
+         data     (node-data i opts)]
+     (merge (if (:children node-val)
+              ;; this is absolutely wrong and results in incorrect node
+              ;; types
+              (update node-val
                       :children
                       (fn update-cns [cns]
-                        (mapv (fn update-cn [cn] (->node cn {:lang lang}))
-                              cns)))
-              val-node)
-            data
-            (select-keys val-node-meta [:row :col :end-row :end-col]))))
+                        (mapv (fn update-cn [cn] (->node cn opts)) cns)))
+              node-val)
+            data)))
   ([i] (->node i {})))
 
 
 (comment
+  (merge (node/coerce :abc) {:a 2})
+  (->node (node/coerce [1 {:a :b}]))
+  (->node (node/coerce "1"))
   (->node ":abc")
   (->node :abc {:lang :clj})
   (->node ^{:node/display-type :custom :node/attr :val}
@@ -545,17 +569,3 @@
 
   Intended for 'higher-level' forms than rewrite-clj supports as node types"
   {:defn "defn-form" :let "let-form" :ns "ns-form"})
-
-
-(defn node-form-meta
-  "Get the metadata of the Clojure form contained in the given node.
-
-    Returns nil if node has no metadata or can't be converted to a s-expression."
-  [node]
-  (if (node/sexpr-able? node) (meta (node/sexpr node))))
-
-
-
-
-(comment
-  (meta (p/parse-string "{:a :b}")))
