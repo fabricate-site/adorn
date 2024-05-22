@@ -23,9 +23,14 @@
       (t/is
        (= :map (:tag (forms/split-node-metadata node-2)))
        "Node metadata splitting should yield non-metadata nodes for node-only keywords")
-      (t/is
-       (= :meta (:tag (forms/split-node-metadata node-1)))
-       "Node metadata splitting should yield metadata nodes for non-node keywords")
+      (let [split-1 (forms/split-node-metadata node-1)]
+        (t/is
+         (= :meta (:tag split-1))
+         "Node metadata splitting should yield metadata nodes for non-node keywords")
+        (t/is (= [:something :something-else]
+                 [(get-in split-1 [:children 0 :children 2 :k])
+                  (:type split-1)])
+              "node metadata should be split appropriately and directly accessible on the resulting node"))
       (let [kw-split (forms/split-node-metadata kw-only-str)]
         (t/is (= :meta (:tag kw-split))
               "metadata splitting should work for keyword-only nodes")
@@ -67,10 +72,12 @@
                  meta
                  (get :display-type)))
           "node metadata should be split recursively for all child nodes"))
-  (comment
+  )
+
+(comment
     (forms/->node (node/coerce [1 ^{:node/display-type :custom} {:a :b}]))
     (meta (forms/split-node-metadata (node/coerce ^{:node/display-type :custom}
-                                                  {:a :b})))))
+                                                  {:a :b}))))
 
 (t/deftest attributes
   (t/testing "HTML attributes"

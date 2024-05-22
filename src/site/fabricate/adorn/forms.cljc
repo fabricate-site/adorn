@@ -108,8 +108,10 @@
                  {}
                  form-meta))]
       (if (and (map? updated-form-meta) (empty? updated-form-meta))
-        (with-meta (peek (:children node)) updated-node-meta)
-        (with-meta (assoc-in node [:children 0] (node/coerce updated-form-meta))
+        (with-meta (merge (peek (:children node))
+                          updated-node-meta) updated-node-meta)
+        (with-meta (assoc-in (merge node updated-node-meta)
+                             [:children 0] (node/coerce updated-form-meta))
           updated-node-meta)))
     node))
 
