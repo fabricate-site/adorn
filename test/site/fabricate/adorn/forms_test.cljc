@@ -53,10 +53,10 @@
           "node data should be set manually if present in the opts"))
   (t/testing "node normalization"
     (t/is (= :clj (:lang (forms/->node (node/coerce "1") {:lang :clj}))))
-    (t/is (= :clj
+    (t/is (= #?(:clj :clj :cljs :cljs)
              (get-in (forms/->node (node/coerce [1 {:a :b}]))
                      [:children 1 :lang]))
-          "node :lang shoulde be set recursively for all child nodes")
+          "node :lang should be set recursively for all child nodes")
     (t/is (= :map
              (-> (node/coerce [1 {:a :b}])
                  (forms/->node {:lang :cljs})
@@ -71,13 +71,12 @@
                  last
                  meta
                  (get :display-type)))
-          "node metadata should be split recursively for all child nodes"))
-  )
+          "node metadata should be split recursively for all child nodes")))
 
 (comment
-    (forms/->node (node/coerce [1 ^{:node/display-type :custom} {:a :b}]))
-    (meta (forms/split-node-metadata (node/coerce ^{:node/display-type :custom}
-                                                  {:a :b}))))
+  (forms/->node (node/coerce [1 ^{:node/display-type :custom} {:a :b}]))
+  (meta (forms/split-node-metadata (node/coerce ^{:node/display-type :custom}
+                                                {:a :b}))))
 
 (t/deftest attributes
   (t/testing "HTML attributes"

@@ -43,7 +43,7 @@ Assuming that the Clojure CLI is installed:
 
 To execute the project's tests:
 ```bash
-clojure -X:test
+clojure -X:dev:test
 ```
 
 

@@ -5,18 +5,18 @@
             [rewrite-clj.parser :as parser]
             [rewrite-clj.node :as node]
             [taoensso.tufte :as t]
-            #?@(:cljs [[shadow.cljs.modern :refer [js-await]] ["fs" :as fs]])))
+            #?@(:cljs [#_[shadow.cljs.modern :refer [js-await]] ["fs" :as fs]])))
 
 (def clj-core-url
   "https://raw.githubusercontent.com/clojure/clojure/clojure-1.11.3/src/clj/clojure/core.clj")
 (declare clj-core)
 
-
-#?(:cljs (do (def core-atom (atom nil))
-             (.then (js/fetch clj-core-url)
-                    #(do (let [txt-promise (.text %)]
-                           (.then
-                            (fn [p] (reset! core-atom p) (println p))))))))
+(comment
+  #?(:cljs (do (def core-atom (atom nil))
+               (.then (js/fetch clj-core-url)
+                      #(do (let [txt-promise (.text %)]
+                             (.then
+                              (fn [p] (reset! core-atom p) (println p)))))))))
 
 
 
