@@ -50,19 +50,45 @@
 ;; if there is something left, that may be something worth preserving in the
 ;; output so then just return a metadata node
 
+(defn get-node-meta
+  "Get the metadata to apply to the node itself from within the form-level metadata."
+  [form-meta node-meta]
+  (cond (and (keyword? form-meta) (= "node" (namespace form-meta)))
+        (assoc (select-keys node-meta [:row :col :end-row :end-col])
+               (keyword (name form-meta))
+               true)
+        (keyword? form-meta) (select-keys node-meta
+                                          [:row :col :end-row :end-col])
+        (map? form-meta)     (reduce-kv (fn rename-node-k [m k v]
+                                          (if (= "node" (namespace k))
+                                            (assoc m (keyword (name k)) v)
+                                            m))
+                                        (select-keys node-meta
+                                                     [:row :col :end-row
+                                                      :end-col])
+                                        form-meta)))
+
+(defn get-form-meta
+  "Get the form-level metadata by removing any keys with the :node namespace"
+  [form-meta]
+  (cond (and (keyword? form-meta) (= "node" (namespace form-meta))) {}
+        (keyword? form-meta) form-meta
+        (map? form-meta)     (reduce-kv (fn rm-node-k [m k v]
+                                          (if (not= "node" (namespace k))
+                                            (assoc m k v)
+                                            m))
+                                        {}
+                                        form-meta)))
+
+(def src-info-keys
+  "Keys used by rewrite-clj to record location info for a node"
+  #{:row :col :end-row :end-col})
+
+(def node-reserved-fields
+  "Keywords used by rewrite-clj to designate node fields"
+  #{:tag :format-string :wrap-length :seq-fn :children})
+
 (defn apply-node-metadata
-  "Returns the child node of the given metadata node with the metadata map applied to the node itself rather than the form.
-
-  If passed a non-metadata node, return it as-is."
-  [node]
-  (if (= :meta (tag node))
-    (let [existing-meta (meta node)
-          inner-node    (last (node/children node))
-          meta-map      (node/sexpr (first (node/children node)))]
-      (with-meta inner-node (merge existing-meta meta-map)))
-    node))
-
-(defn split-node-metadata
   "Rewrites the given node based on the type of metadata it has.
 
   Metadata keywords beginning with the :node namespace prefix get applied to the node;
@@ -73,53 +99,24 @@
 
   Non-metadata nodes are returned as-is."
   [node]
-  (if  (= :meta (tag node))
+  (if (= :meta (tag node))
     (let [node-meta         (meta node)
           form-meta         (node/sexpr (get-in node [:children 0]))
-          ;; TODO: decide what to merge with the node itself and what to keep
-          ;; as metadata alone
-          node-data nil
-          updated-node-meta
-          (cond
-            (and (keyword? form-meta) (= "node" (namespace form-meta)))
-            (assoc (select-keys node-meta [:row :col :end-row
-                                           :end-col])
-                   (keyword (name form-meta)) true)
-            (keyword? form-meta) (select-keys node-meta [:row :col :end-row
-                                                         :end-col])
-
-            (map? form-meta)
-            (reduce-kv (fn rename-node-k [m k v]
-                         (if (= "node" (namespace k))
-                           (assoc m (keyword (name k)) v)
-                           m))
-                       (select-keys node-meta
-                                    [:row :col :end-row
-                                     :end-col])
-                       form-meta))
-          updated-form-meta
-          (cond (and (keyword? form-meta) (= "node" (namespace form-meta)))
-                {}
-                (keyword? form-meta) form-meta
-                (map? form-meta)
-                (reduce-kv
-                 (fn rm-node-k [m k v]
-                   (if (not= "node" (namespace k)) (assoc m k v) m))
-                 {}
-                 form-meta))]
+          updated-node-meta (apply dissoc
+                                   (get-node-meta form-meta node-meta)
+                                   node-reserved-fields)
+          updated-form-meta (get-form-meta form-meta)
+          node-data         (assoc
+                             (apply dissoc updated-node-meta src-info-keys)
+                             :src-info
+                             (select-keys updated-node-meta src-info-keys))]
       (if (and (map? updated-form-meta) (empty? updated-form-meta))
-        (with-meta (merge (peek (:children node))
-                          updated-node-meta) updated-node-meta)
-        (with-meta (assoc-in (merge node updated-node-meta)
-                             [:children 0] (node/coerce updated-form-meta))
+        (with-meta (merge (peek (:children node)) node-data) updated-node-meta)
+        (with-meta (assoc-in (merge node node-data)
+                             [:children 0]
+                             (node/coerce updated-form-meta))
           updated-node-meta)))
     node))
-
-(comment
-  (split-node-metadata (p/parse-string-all
-                        "^{:node/display-type :custom} [:abc]"))
-  (split-node-metadata (p/parse-string "^{:node/display-type :custom} [:abc]"))
-  (->node (p/parse-string "[^{:node/display-type :custom} [:abc]]")))
 
 (defn node-meta
   [val-meta]
@@ -143,7 +140,7 @@
      ;; default to platform lang if not provided
      :or   {lang #?(:clj :clj
                     :cljs :cljs)}}]
-   (let [node-val (split-node-metadata (cond
+   (let [node-val (apply-node-metadata (cond
                                          ;; if it's a node, return it as-is
                                          (node/node? i) i
                                          ;; if it's a string, parse it
@@ -240,11 +237,17 @@
       :cljs js/Boolean)
    :boolean
    ;; splice in platform specific types
-   #?@(:clj [java.lang.Long :long java.lang.Integer :integer clojure.lang.BigInt
-             :big-int java.lang.String :string clojure.lang.Ratio :ratio
-             java.lang.Float :float java.lang.Double :double
-             java.math.BigDecimal :big-decimal java.lang.Class :class]
-       :cljs [js/Number :number js/String :string])})
+   #?@(:clj [java.lang.Long       :long
+             java.lang.Integer    :integer
+             clojure.lang.BigInt  :big-int
+             java.lang.String     :string
+             clojure.lang.Ratio   :ratio
+             java.lang.Float      :float
+             java.lang.Double     :double
+             java.math.BigDecimal :big-decimal
+             java.lang.Class      :class]
+       :cljs [js/Number :number
+              js/String :string])})
 
 
   ;; the above lookup map may be "too clever" -

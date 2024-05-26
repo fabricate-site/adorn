@@ -18,30 +18,45 @@
           kw-only      (node/coerce ^:kw [1 2 3])
           kw-only-str  (p/parse-string "^:kw [1 2 3]")]
       (t/is
-       (= :vector (:tag (forms/split-node-metadata str-vec-node)))
+       (= :vector (:tag (forms/apply-node-metadata str-vec-node)))
        "forms with node-only metadata should be converted to the correct type after splitting")
       (t/is
-       (= :map (:tag (forms/split-node-metadata node-2)))
+       (= :map (:tag (forms/apply-node-metadata node-2)))
        "Node metadata splitting should yield non-metadata nodes for node-only keywords")
-      (let [split-1 (forms/split-node-metadata node-1)]
+      (let [split-1 (forms/apply-node-metadata node-1)]
         (t/is
          (= :meta (:tag split-1))
          "Node metadata splitting should yield metadata nodes for non-node keywords")
-        (t/is (= [:something :something-else]
-                 [(get-in split-1 [:children 0 :children 2 :k])
-                  (:type split-1)])
-              "node metadata should be split appropriately and directly accessible on the resulting node"))
-      (let [kw-split (forms/split-node-metadata kw-only-str)]
+        (t/is
+         (= [:something :something-else]
+            [(get-in split-1 [:children 0 :children 2 :k]) (:type split-1)])
+         "node metadata should be split appropriately and directly accessible on the resulting node"))
+      (let [kw-split (forms/apply-node-metadata kw-only-str)]
         (t/is (= :meta (:tag kw-split))
               "metadata splitting should work for keyword-only nodes")
-        (t/is (= [:kw [1 2 3]] (node/sexprs (:children kw-split))))))
+        (t/is (= [:kw [1 2 3]] (node/sexprs (:children kw-split)))))
+      (t/testing "expected data model"
+        (let [parsed-node
+              (-> "^{:node/type :example :node/display-type :example} [1]"
+                  (p/parse-string)
+                  (forms/apply-node-metadata))
+              conflict-node (forms/apply-node-metadata
+                             (node/coerce ^{:node/tag :custom} [1]))]
+          (t/is (and (= {:type         :example
+                         :display-type :example
+                         :src-info     {:row 1 :col 1 :end-row 1 :end-col 55}}
+                        (select-keys parsed-node
+                                     [:type :display-type :src-info])))
+                ":node-prefixed keywords should be merged")
+          (t/is (not (= :custom (:tag conflict-node)))
+                "reserved rewrite-clj tags should be ignored"))))
     (t/is (= :custom
              (:display-type (forms/->node (with-meta (p/parse-string-all ":abc")
-                                            {:node/display-type :custom
-                                             :node/attr :val})))))
+                                                     {:node/display-type :custom
+                                                      :node/attr :val})))))
     (t/is (contains? (forms/->node (with-meta (p/parse-string-all ":abc")
-                                     {:node/display-type :custom
-                                      :node/attr         :val}))
+                                              {:node/display-type :custom
+                                               :node/attr         :val}))
                      :display-type))
     (t/is (= :clj (:lang (forms/->node :abc {:lang :clj}))))
     ;; *should* these be coerced into non-metadata nodes?
@@ -53,7 +68,8 @@
           "node data should be set manually if present in the opts"))
   (t/testing "node normalization"
     (t/is (= :clj (:lang (forms/->node (node/coerce "1") {:lang :clj}))))
-    (t/is (= #?(:clj :clj :cljs :cljs)
+    (t/is (= #?(:clj :clj
+                :cljs :cljs)
              (get-in (forms/->node (node/coerce [1 {:a :b}]))
                      [:children 1 :lang]))
           "node :lang should be set recursively for all child nodes")
@@ -75,7 +91,7 @@
 
 (comment
   (forms/->node (node/coerce [1 ^{:node/display-type :custom} {:a :b}]))
-  (meta (forms/split-node-metadata (node/coerce ^{:node/display-type :custom}
+  (meta (forms/apply-node-metadata (node/coerce ^{:node/display-type :custom}
                                                 {:a :b}))))
 
 (t/deftest attributes
@@ -200,17 +216,7 @@
                             (forms/->span (node/coerce [1 2 3])
                                           {}
                                           (constantly :placeholder)))))
-          "function overrides should work for child nodes")
-    (t/testing "metadata"
-      (let [lifted   (forms/apply-node-metadata (node/coerce ^{:k :v} []))
-            lifted-2 (forms/apply-node-metadata (p/parse-string "^{:k :v} []"))]
-        (t/is (= :vector (node/tag lifted))
-              "Metadata application should yield child node")
-        (t/is (= {:k :v} (meta lifted)) "Metadata should be applied properly")
-        (t/is (contains? (meta lifted-2) :col)
-              "Applied metadata should be merged")
-        (t/is (= :vector
-                 (node/tag (forms/apply-node-metadata (node/coerce []))))))))
+          "function overrides should work for child nodes"))
   (t/testing "special forms"
     ;; not quite in the sense that Clojure uses the term
     ;; https://clojure.org/reference/special_forms
