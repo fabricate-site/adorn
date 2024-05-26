@@ -48,18 +48,18 @@
 (t/add-basic-println-handler! {})
 
 (t/profile {}
-           (dotimes [_ #?(:clj 50
-                          :cljs 15)]
-             (t/p :core-parse (parser/parse-string-all clj-core))
-             (t/p :multimethod/core-parse+adorn (adorn/clj->hiccup clj-core))
-             (t/p :multimethod/parsed+adorn (adorn/clj->hiccup core-parsed))
-             (t/p :multimethod/sexprs+adorn (adorn/clj->hiccup core-sexprs))
-             (t/p :fn/core-parse+adorn
-                  (-> clj-core
-                      parser/parse-string-all
-                      forms/->span))
-             (t/p :fn/parsed+adorn (forms/->span core-parsed))
-             (t/p :fn/sexprs+adorn (forms/->span core-sexprs))))
+  (dotimes [_ #?(:clj 15
+                 :cljs 15)]
+    (t/p :core-parse (parser/parse-string-all clj-core))
+    (t/p :multimethod/core-parse+adorn (adorn/clj->hiccup clj-core))
+    (t/p :multimethod/parsed+adorn (adorn/clj->hiccup core-parsed))
+    (t/p :multimethod/sexprs+adorn (adorn/clj->hiccup core-sexprs))
+    (t/p :fn/core-parse+adorn
+         (-> clj-core
+             parser/parse-string-all
+             forms/->span))
+    (t/p :fn/parsed+adorn (forms/->span core-parsed))
+    (t/p :fn/sexprs+adorn (forms/->span core-sexprs))))
 
 ;; mean execution time (JVM) just to parse the string is 59ms, which already
 ;; puts highlighting core.clj at 60 FPS outside the realm of possibility.
@@ -69,7 +69,7 @@
 
 
 (t/profile {}
-  (dotimes [_ #?(:clj 50
+  (dotimes [_ #?(:clj 15
                  :cljs 15)]
     ;; re-memoize ->span each iteration to make sure each test
     ;; is under identical conditions

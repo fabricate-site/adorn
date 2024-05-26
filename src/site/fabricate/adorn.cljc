@@ -18,6 +18,8 @@
    (let [display-type      (or (get opts :display-type)
                                (get node :display-type)
                                (get (meta node) :display-type)
+                               (get node :type)
+                               (get (meta node) :type)
                                (forms/node-type node))
          self-display-type (or (when (map? display-type) (:self* display-type))
                                display-type)]

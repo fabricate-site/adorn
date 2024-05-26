@@ -60,7 +60,8 @@
         (keyword? form-meta) (select-keys node-meta
                                           [:row :col :end-row :end-col])
         (map? form-meta)     (reduce-kv (fn rename-node-k [m k v]
-                                          (if (= "node" (namespace k))
+                                          (if (and (or (keyword? k)
+                                                       (symbol? k)) (= "node" (namespace k)))
                                             (assoc m (keyword (name k)) v)
                                             m))
                                         (select-keys node-meta
@@ -74,7 +75,10 @@
   (cond (and (keyword? form-meta) (= "node" (namespace form-meta))) {}
         (keyword? form-meta) form-meta
         (map? form-meta)     (reduce-kv (fn rm-node-k [m k v]
-                                          (if (not= "node" (namespace k))
+                                          (if (or (and (or (keyword? k)
+                                                           (symbol? k))
+                                                       (not= "node" (namespace k)))
+                                                  (not (or (keyword? k) (symbol? k))))
                                             (assoc m k v)
                                             m))
                                         {}
