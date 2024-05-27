@@ -92,6 +92,9 @@
                   (forms/->node '(1 2 [4 5 {:a :b :aa [sym sym-2]}]))))
   ;; this is a recursive fn, so the constant factors are probably worth worrying about
 
+  (prof/profile (dotimes [_ 500]
+                  (forms/->node core-parsed)))
+
   (prof/profile (dotimes [_ 5000]
                   (forms/->node (node/coerce
                                  '(1 2 [4 5 {:a :b :aa [sym sym-2]}])))))
