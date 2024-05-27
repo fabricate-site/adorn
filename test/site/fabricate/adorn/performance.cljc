@@ -4,6 +4,7 @@
             [site.fabricate.adorn.forms :as forms]
             [rewrite-clj.parser :as parser]
             [rewrite-clj.node :as node]
+            [clj-async-profiler.core :as prof]
             [taoensso.tufte :as t]
             #?@(:cljs [#_[shadow.cljs.modern :refer [js-await]] ["fs" :as fs]])))
 
@@ -44,6 +45,7 @@
   (parser/parse-string-all clj-core))
 
 (def core-sexprs "All of clojure.core as a do block" (node/sexpr core-parsed))
+(def core-converted "A preconverted version of clojure.core" (forms/->node core-parsed))
 
 (t/add-basic-println-handler! {})
 
@@ -53,19 +55,15 @@
     (t/p :core-parse (parser/parse-string-all clj-core))
     (t/p :multimethod/core-parse+adorn (adorn/clj->hiccup clj-core))
     (t/p :multimethod/parsed+adorn (adorn/clj->hiccup core-parsed))
+    (t/p :multimethod/converted+adorn (adorn/clj->hiccup core-converted))
     (t/p :multimethod/sexprs+adorn (adorn/clj->hiccup core-sexprs))
     (t/p :fn/core-parse+adorn
          (-> clj-core
              parser/parse-string-all
              forms/->span))
     (t/p :fn/parsed+adorn (forms/->span core-parsed))
-    (t/p :fn/sexprs+adorn (forms/->span core-sexprs))))
-
-;; mean execution time (JVM) just to parse the string is 59ms, which already
-;; puts highlighting core.clj at 60 FPS outside the realm of possibility.
-;; however, performance is pretty reasonable for such a huge file in the
-;; grand scheme of things: 170ms on average to parse and convert a
-;; 8KLoC file
+    (t/p :fn/sexprs+adorn (forms/->span core-sexprs))
+    (t/p :fn/converted+adorn (forms/->span core-converted))))
 
 
 (t/profile {}
@@ -81,7 +79,24 @@
       (t/p :memoized/parsed+adorn (forms/->span core-parsed))
       (t/p :memoized/sexprs+adorn (forms/->span core-sexprs)))))
 
-;; 90th percentile performance for the pre-parsed core.clj code
-;; is 16ms - which is roughly 60FPS. In cljs it's 26ms, which is
-;; a little over 30FPS. That's pretty good for code that is otherwise
-;; fairly unoptimized.
+
+(comment
+
+  (prof/profile (dotimes [_ 50]
+                  (forms/->node core-parsed)
+                  ))
+
+
+  (t/profile {}
+    (dotimes [_ 1000]
+      (t/p :apply-list (apply list (range 1 50000)))
+      (t/p :apply-list-mapv (apply list (mapv identity (range 1 50000))))
+      (t/p :seq (seq (range 1 50000)))
+      (t/p :doall (doall (range 1 50000)))
+      ))
+
+  (prof/profile (dotimes [_ ])
+    )
+  (prof/stop)
+  (prof/serve-ui 8085)
+  )

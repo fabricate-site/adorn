@@ -133,7 +133,9 @@
   ([v opts]
    (merge (node-meta (meta v))
           (node-meta opts)
-          (select-keys opts [:display-type :lang])))
+          (select-keys opts [:display-type :lang])
+          ;; value for if the node has been normalized
+          {:converted? true}))
   ([v] (node-data v {})))
 
 ;; TODO: should this be called ->form instead?
@@ -155,8 +157,6 @@
          opts     (assoc opts :lang lang)
          data     (node-data i opts)]
      (merge (if (:children node-val)
-              ;; this is absolutely wrong and results in incorrect node
-              ;; types
               (update node-val
                       :children
                       (fn update-cns [cns]
@@ -537,7 +537,8 @@
 
 (defn ->span
   ([n attrs subform-fn]
-   (let [node (->node n)]
+   ;; only convert if necessary
+   (let [node (if (:converted? n) n (->node n))]
      (case (tag node)
        :fn           (fn->span node attrs subform-fn)
        :meta         (meta->span node attrs subform-fn)
