@@ -6,7 +6,8 @@
             [rewrite-clj.node :as node]
             [clj-async-profiler.core :as prof]
             [taoensso.tufte :as t]
-            #?@(:cljs [#_[shadow.cljs.modern :refer [js-await]] ["fs" :as fs]])))
+            #?@(:cljs [#_[shadow.cljs.modern :refer [js-await]]
+                       ["fs" :as fs]])))
 
 (def clj-core-url
   "https://raw.githubusercontent.com/clojure/clojure/clojure-1.11.3/src/clj/clojure/core.clj")
@@ -45,25 +46,30 @@
   (parser/parse-string-all clj-core))
 
 (def core-sexprs "All of clojure.core as a do block" (node/sexpr core-parsed))
-(def core-converted "A preconverted version of clojure.core" (forms/->node core-parsed))
+(def core-converted
+  "A preconverted version of clojure.core"
+  (forms/->node core-parsed))
 
 (t/add-basic-println-handler! {})
 
 (t/profile {}
-  (dotimes [_ #?(:clj 15
-                 :cljs 15)]
-    (t/p :core-parse (parser/parse-string-all clj-core))
-    (t/p :multimethod/core-parse+adorn (adorn/clj->hiccup clj-core))
-    (t/p :multimethod/parsed+adorn (adorn/clj->hiccup core-parsed))
-    (t/p :multimethod/converted+adorn (adorn/clj->hiccup core-converted))
-    (t/p :multimethod/sexprs+adorn (adorn/clj->hiccup core-sexprs))
-    (t/p :fn/core-parse+adorn
-         (-> clj-core
-             parser/parse-string-all
-             forms/->span))
-    (t/p :fn/parsed+adorn (forms/->span core-parsed))
-    (t/p :fn/sexprs+adorn (forms/->span core-sexprs))
-    (t/p :fn/converted+adorn (forms/->span core-converted))))
+           (dotimes [_ #?(:clj 25
+                          :cljs 15)]
+             (t/p :core-parse (parser/parse-string-all clj-core))
+             (t/p :convert/parsed (forms/->node core-parsed))
+             (t/p :convert/sexpr (forms/->node core-sexprs))
+             (t/p :multimethod/core-parse+adorn (adorn/clj->hiccup clj-core))
+             (t/p :multimethod/parsed+adorn (adorn/clj->hiccup core-parsed))
+             (t/p :multimethod/converted+adorn
+                  (adorn/clj->hiccup core-converted))
+             (t/p :multimethod/sexprs+adorn (adorn/clj->hiccup core-sexprs))
+             (t/p :fn/core-parse+adorn
+                  (-> clj-core
+                      parser/parse-string-all
+                      forms/->span))
+             (t/p :fn/parsed+adorn (forms/->span core-parsed))
+             (t/p :fn/sexprs+adorn (forms/->span core-sexprs))
+             (t/p :fn/converted+adorn (forms/->span core-converted))))
 
 
 (t/profile {}
@@ -77,26 +83,25 @@
                parser/parse-string-all
                forms/->span))
       (t/p :memoized/parsed+adorn (forms/->span core-parsed))
+      (t/p :memoized/converted+adorn (forms/->span core-converted))
       (t/p :memoized/sexprs+adorn (forms/->span core-sexprs)))))
 
 
 (comment
+  (prof/profile (dotimes [_ 5000]
+                  (forms/->node '(1 2 [4 5 {:a :b :aa [sym sym-2]}]))))
+  ;; this is a recursive fn, so the constant factors are probably worth worrying about
 
-  (prof/profile (dotimes [_ 50]
-                  (forms/->node core-parsed)
-                  ))
-
-
+  (prof/profile (dotimes [_ 5000]
+                  (forms/->node (node/coerce
+                                 '(1 2 [4 5 {:a :b :aa [sym sym-2]}])))))
   (t/profile {}
     (dotimes [_ 1000]
       (t/p :apply-list (apply list (range 1 50000)))
-      (t/p :apply-list-mapv (apply list (mapv identity (range 1 50000))))
+      (t/p :apply-list-mapv
+           (apply list (mapv identity (range 1 50000))))
       (t/p :seq (seq (range 1 50000)))
-      (t/p :doall (doall (range 1 50000)))
-      ))
-
-  (prof/profile (dotimes [_ ])
-    )
+      (t/p :doall (doall (range 1 50000)))))
+  (prof/profile (dotimes [_]))
   (prof/stop)
-  (prof/serve-ui 8085)
-  )
+  (prof/serve-ui 8085))

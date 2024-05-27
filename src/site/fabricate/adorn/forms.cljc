@@ -60,8 +60,8 @@
         (keyword? form-meta) (select-keys node-meta
                                           [:row :col :end-row :end-col])
         (map? form-meta)     (reduce-kv (fn rename-node-k [m k v]
-                                          (if (and (or (keyword? k)
-                                                       (symbol? k)) (= "node" (namespace k)))
+                                          (if (and (or (keyword? k) (symbol? k))
+                                                   (= "node" (namespace k)))
                                             (assoc m (keyword (name k)) v)
                                             m))
                                         (select-keys node-meta
@@ -74,15 +74,15 @@
   [form-meta]
   (cond (and (keyword? form-meta) (= "node" (namespace form-meta))) {}
         (keyword? form-meta) form-meta
-        (map? form-meta)     (reduce-kv (fn rm-node-k [m k v]
-                                          (if (or (and (or (keyword? k)
-                                                           (symbol? k))
-                                                       (not= "node" (namespace k)))
-                                                  (not (or (keyword? k) (symbol? k))))
-                                            (assoc m k v)
-                                            m))
-                                        {}
-                                        form-meta)))
+        (map? form-meta)     (reduce-kv
+                              (fn rm-node-k [m k v]
+                                (if (or (and (or (keyword? k) (symbol? k))
+                                             (not= "node" (namespace k)))
+                                        (not (or (keyword? k) (symbol? k))))
+                                  (assoc m k v)
+                                  m))
+                              {}
+                              form-meta)))
 
 (def src-info-keys
   "Keys used by rewrite-clj to record location info for a node"
@@ -125,7 +125,9 @@
 (defn node-meta
   [val-meta]
   (reduce-kv (fn rename-node-k [m k v]
-               (if (= "node" (namespace k)) (assoc m (keyword (name k)) v) m))
+               (if (and (keyword? k) (= "node" (namespace k)))
+                 (assoc m (keyword (name k)) v)
+                 m))
              (select-keys val-meta [:row :col :end-row :end-col])
              val-meta))
 
@@ -157,10 +159,9 @@
          opts     (assoc opts :lang lang)
          data     (node-data i opts)]
      (merge (if (:children node-val)
-              (update node-val
-                      :children
-                      (fn update-cns [cns]
-                        (mapv (fn update-cn [cn] (->node cn opts)) cns)))
+              (node/replace-children node-val
+                                     (mapv (fn update-cn [cn] (->node cn opts))
+                                           (node/children node-val)))
               node-val)
             data)))
   ([i] (->node i {})))
