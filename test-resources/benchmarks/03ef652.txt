@@ -1,0 +1,23 @@
+pId                               nCalls        Min      50% ≤      90% ≤      95% ≤      99% ≤        Max       Mean   MAD      Clock  Total
+
+:multimethod/core-parse+adorn         50      149ms      158ms      165ms      169ms      245ms      245ms      160ms   ±3%      8.01s    25%
+:multimethod/sexprs+adorn             50      112ms      118ms      124ms      125ms      141ms      141ms      119ms   ±3%      5.95s    18%
+:fn/core-parse+adorn                  50       99ms      110ms      115ms      120ms      127ms      127ms      111ms   ±3%      5.53s    17%
+:multimethod/parsed+adorn             50       91ms       96ms      102ms      103ms      107ms      107ms       96ms   ±3%      4.80s    15%
+:fn/sexprs+adorn                      50       64ms       69ms       72ms       72ms       74ms       74ms       69ms   ±3%      3.43s    11%
+:core-parse                           50       47ms       50ms       54ms       62ms       80ms       80ms       52ms   ±6%      2.58s     8%
+:fn/parsed+adorn                      50       42ms       45ms       48ms       50ms       51ms       51ms       46ms   ±4%      2.27s     7%
+
+Accounted                                                                                                                       32.60s   100%
+Clock                                                                                                                           32.60s   100%
+
+
+pId                            nCalls        Min      50% ≤      90% ≤      95% ≤      99% ≤        Max       Mean   MAD      Clock  Total
+
+:memoized/core-parse+adorn         50       90ms      100ms      107ms      110ms      116ms      116ms      100ms   ±4%      5.01s    61%
+:memoized/sexprs+adorn             50       48ms       52ms       56ms       57ms       62ms       62ms       52ms   ±4%      2.60s    32%
+:memoized/parsed+adorn             50        4ms       14ms       19ms       21ms       21ms       21ms       11ms  ±57%      543ms     7%
+
+Accounted                                                                                                                     8.16s   100%
+Clock                                                                                                                         8.16s   100%
+
