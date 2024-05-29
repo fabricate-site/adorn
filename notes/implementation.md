@@ -65,4 +65,6 @@ A diffgraph comparing overall node conversion between the `main` and `node-data`
 
 When `->node` is called up front on the form to be converted, the double visitation problem disappears. This suggests that `->node` conversion could be made lazier and more efficient if rewritten to be called "just in time" when node conversion is about to happen, as long as the upper-level form data gets propagated downwards to subforms for appropriate conversion. 
 
-The increase in self-time for the parts of the call stack that directly overlap also indicates that constant factors are slowing performance. The difference for a small data structure is (understandably) small.
+The increase in self-time for the parts of the call stack that directly overlap also indicates that constant factors are slowing performance. The difference for a small data structure is (understandably) small. Surprisingly, a performance comparsion with a pre-converted node shows that `node-data` is slightly _faster_ than `main` when both are operating on a pre-converted version of `core.clj`. 
+
+This indicates to me that the performance regression is fixable.

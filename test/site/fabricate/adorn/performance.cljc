@@ -94,10 +94,11 @@
   (def test-node-converted
     (forms/->node test-node))
 
-  (prof/profile (dotimes [_ 5000]
-                  (forms/->span test-node-converted)))
+  (prof/profile (dotimes [_ 50]
+                  (forms/->span core-converted)))
 
-  (prof/generate-diffgraph 6 5 {})
+
+  (prof/generate-diffgraph 1 2 {})
 
   ;; this is a recursive fn, so the constant factors are probably worth worrying about
 
