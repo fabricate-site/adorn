@@ -62,3 +62,7 @@ but that default perhaps should be questioned - just because rewrite-clj represe
 The version of `forms/->node` on `main` does almost nothing, so it's not surprising that it has much higher performance than a version that recursively updates all subnodes. The real question is: why doesn't the recursive transformation save time when actually converting the node? Is it just because the overhead of visiting all subnodes twice washes out the potential performance benefits of converting the nodes "up front"?
 
 A diffgraph comparing overall node conversion between the `main` and `node-data` branches will illuminate more here than just a comparison between the `->node` implementations.
+
+When `->node` is called up front on the form to be converted, the double visitation problem disappears. This suggests that `->node` conversion could be made lazier and more efficient if rewritten to be called "just in time" when node conversion is about to happen, as long as the upper-level form data gets propagated downwards to subforms for appropriate conversion. 
+
+The increase in self-time for the parts of the call stack that directly overlap also indicates that constant factors are slowing performance. The difference for a small data structure is (understandably) small.

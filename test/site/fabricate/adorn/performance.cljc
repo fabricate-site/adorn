@@ -88,8 +88,17 @@
 
 
 (comment
+  (def test-node
+    (node/coerce '(1 2 [4 5 {:a :b :aa [sym sym-2]}])))
+
+  (def test-node-converted
+    (forms/->node test-node))
+
   (prof/profile (dotimes [_ 5000]
-                  (forms/->node '(1 2 [4 5 {:a :b :aa [sym sym-2]}]))))
+                  (forms/->span test-node-converted)))
+
+  (prof/generate-diffgraph 6 5 {})
+
   ;; this is a recursive fn, so the constant factors are probably worth worrying about
 
   (prof/profile (dotimes [_ 500]
