@@ -54,3 +54,11 @@ this implies that the custom class annotation will live _inside_ the resulting m
 
 but that default perhaps should be questioned - just because rewrite-clj represents metadata nodes as a grouped unit doesn't mean that adorn has to. meta->span could simply return a list with the metadata element followed by the form on which metadata is set.
 
+# Performance
+
+
+## Understanding the performance gap between `node-data` and `main`
+**2024-05-29**
+The version of `forms/->node` on `main` does almost nothing, so it's not surprising that it has much higher performance than a version that recursively updates all subnodes. The real question is: why doesn't the recursive transformation save time when actually converting the node? Is it just because the overhead of visiting all subnodes twice washes out the potential performance benefits of converting the nodes "up front"?
+
+A diffgraph comparing overall node conversion between the `main` and `node-data` branches will illuminate more here than just a comparison between the `->node` implementations.
