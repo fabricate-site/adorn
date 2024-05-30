@@ -52,11 +52,11 @@
                 "reserved rewrite-clj tags should be ignored"))))
     (t/is (= :custom
              (:display-type (forms/->node (with-meta (p/parse-string-all ":abc")
-                                                     {:node/display-type :custom
-                                                      :node/attr :val})))))
+                                            {:node/display-type :custom
+                                             :node/attr :val})))))
     (t/is (contains? (forms/->node (with-meta (p/parse-string-all ":abc")
-                                              {:node/display-type :custom
-                                               :node/attr         :val}))
+                                     {:node/display-type :custom
+                                      :node/attr         :val}))
                      :display-type))
     (t/is (= :clj (:lang (forms/->node :abc {:lang :clj}))))
     ;; *should* these be coerced into non-metadata nodes?
@@ -70,19 +70,20 @@
     (t/is (= :clj (:lang (forms/->node (node/coerce "1") {:lang :clj}))))
     (t/is (= #?(:clj :clj
                 :cljs :cljs)
-             (get-in (forms/->node (node/coerce [1 {:a :b}]))
+             (get-in (forms/->node (node/coerce [1 {:a :b}])
+                                   {:update-subnodes? true})
                      [:children 1 :lang]))
           "node :lang should be set recursively for all child nodes")
     (t/is (= :map
              (-> (node/coerce [1 {:a :b}])
-                 (forms/->node {:lang :cljs})
+                 (forms/->node {:lang :cljs :update-subnodes? true})
                  :children
                  last
                  :tag))
           "subnodes should have correct types after updating")
     (t/is (= :custom
              (-> (node/coerce [1 ^{:node/display-type :custom} {:a :b}])
-                 forms/->node
+                 (forms/->node {:update-subnodes? true})
                  :children
                  last
                  meta

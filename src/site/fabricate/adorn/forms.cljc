@@ -143,11 +143,12 @@
 ;; TODO: should this be called ->form instead?
 (defn ->node
   ([i
-    {:keys [lang]
+    {:keys [lang update-subnodes?]
      :as   opts
      ;; default to platform lang if not provided
      :or   {lang #?(:clj :clj
-                    :cljs :cljs)}}]
+                    :cljs :cljs)
+            update-subnodes? false}}]
    (let [node-val (apply-node-metadata (cond
                                          ;; if it's a node, return it as-is
                                          (node/node? i) i
@@ -158,7 +159,7 @@
                                          :default       (node/coerce i)))
          opts     (assoc opts :lang lang)
          data     (node-data i opts)]
-     (merge (if (:children node-val)
+     (merge (if (and update-subnodes? (:children node-val))
               (node/replace-children node-val
                                      (mapv (fn update-cn [cn] (->node cn opts))
                                            (node/children node-val)))
