@@ -84,6 +84,30 @@
                               {}
                               form-meta)))
 
+;; this function gets called a lot, so going through the meta in one pass makes
+;; more sense.
+(defn split-node-metadata
+  [form-meta node-meta]
+  (let [kw-form?  (keyword? form-meta)
+        map-form? (map? form-meta)
+        node-meta {:src-info (select-keys node-meta
+                                          [:row :col :end-row :end-col])}]
+    (cond map-form? (reduce-kv
+                     (fn update-meta [m k v]
+                       (let [node-k?   (and (and (or (keyword? k) (symbol? k))
+                                                 (= "node" (namespace k))))
+                             renamed-k (if node-k? (keyword (name k)) k)]
+                         (cond (not node-k?) (assoc-in m [:form-meta k] v)
+                               node-k?       (assoc-in m
+                                                       [:node-meta renamed-k]
+                                                       v))))
+                     {:form-meta {} :node-meta node-meta}
+                     form-meta)
+          (and kw-form? (= "node" (namespace form-meta)))
+          {:form-meta {}
+           :node-meta (assoc node-meta (keyword (name form-meta)) true)}
+          kw-form?  {:form-meta form-meta :node-meta node-meta})))
+
 (def src-info-keys
   "Keys used by rewrite-clj to record location info for a node"
   #{:row :col :end-row :end-col})
@@ -104,16 +128,22 @@
   Non-metadata nodes are returned as-is."
   [node]
   (if (= :meta (tag node))
-    (let [node-meta         (meta node)
-          form-meta         (node/sexpr (get-in node [:children 0]))
+    (let [#_#_node-meta (meta node)
+          #_#_form-meta (first (node/child-sexprs node))
+          {:keys [node-meta form-meta]}
+          (split-node-metadata (first (node/child-sexprs node)) (meta node))
           updated-node-meta (apply dissoc
-                                   (get-node-meta form-meta node-meta)
+                                   node-meta
+                                   #_(get-node-meta form-meta node-meta)
                                    node-reserved-fields)
-          updated-form-meta (get-form-meta form-meta)
-          node-data         (assoc
-                             (apply dissoc updated-node-meta src-info-keys)
-                             :src-info
-                             (select-keys updated-node-meta src-info-keys))]
+          updated-form-meta
+          #_(get-form-meta form-meta)
+          form-meta
+          node-data
+          #_(assoc (apply dissoc updated-node-meta src-info-keys)
+                   :src-info
+                   (select-keys updated-node-meta src-info-keys))
+          updated-node-meta]
       (if (and (map? updated-form-meta) (empty? updated-form-meta))
         (with-meta (merge (peek (:children node)) node-data) updated-node-meta)
         (with-meta (assoc-in (merge node node-data)
