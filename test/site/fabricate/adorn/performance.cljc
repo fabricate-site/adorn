@@ -53,23 +53,24 @@
 (t/add-basic-println-handler! {})
 
 (t/profile {}
-           (dotimes [_ #?(:clj 25
-                          :cljs 15)]
-             (t/p :core-parse (parser/parse-string-all clj-core))
-             (t/p :convert/parsed (forms/->node core-parsed))
-             (t/p :convert/sexpr (forms/->node core-sexprs))
-             (t/p :multimethod/core-parse+adorn (adorn/clj->hiccup clj-core))
-             (t/p :multimethod/parsed+adorn (adorn/clj->hiccup core-parsed))
-             (t/p :multimethod/converted+adorn
-                  (adorn/clj->hiccup core-converted))
-             (t/p :multimethod/sexprs+adorn (adorn/clj->hiccup core-sexprs))
-             (t/p :fn/core-parse+adorn
-                  (-> clj-core
-                      parser/parse-string-all
-                      forms/->span))
-             (t/p :fn/parsed+adorn (forms/->span core-parsed))
-             (t/p :fn/sexprs+adorn (forms/->span core-sexprs))
-             (t/p :fn/converted+adorn (forms/->span core-converted))))
+  (dotimes [_ #?(:clj 25
+                 :cljs 15)]
+    (t/p :core-parse (parser/parse-string-all clj-core))
+    (t/p :convert/parsed (forms/->node core-parsed))
+    (t/p :convert/sexpr (forms/->node core-sexprs))
+    (t/p :multimethod/core-parse+adorn (adorn/clj->hiccup clj-core))
+    (t/p :multimethod/parsed+adorn (adorn/clj->hiccup core-parsed))
+    (t/p :multimethod/converted+adorn
+         (adorn/clj->hiccup core-converted))
+    (t/p :multimethod/sexprs+adorn (adorn/clj->hiccup core-sexprs))
+    (t/p :fn/core-parse+adorn
+         (-> clj-core
+             parser/parse-string-all
+             forms/->span))
+    (t/p :fn/parsed+adorn (forms/->span core-parsed))
+    (t/p :fn/sexprs+adorn (forms/->span core-sexprs))
+    (t/p :fn/converted+adorn (forms/->span core-converted))
+    (t/p :sexpr/print (with-out-str (print core-sexprs)))))
 
 
 (t/profile {}
@@ -88,23 +89,17 @@
 
 
 (comment
-  (def test-node
-    (node/coerce '(1 2 [4 5 {:a :b :aa [sym sym-2]}])))
-
-  (def test-node-converted
-    (forms/->node test-node))
-
-  (prof/profile (dotimes [_ 50]
-                  (forms/->span core-converted)))
-
-
-  (prof/generate-diffgraph 1 2 {})
-
-  ;; this is a recursive fn, so the constant factors are probably worth worrying about
-
-  (prof/profile (dotimes [_ 500]
-                  (forms/->node core-parsed)))
-
+  (def test-node (node/coerce '(1 2 [4 5 {:a :b :aa [sym sym-2]}])))
+  (def test-node-converted (forms/->node test-node))
+  (prof/clear-results)
+  (prof/profile (dotimes [_ 50] (forms/->span core-parsed)))
+  (prof/generate-diffgraph 2 1 {})
+  ;; this is a recursive fn, so the constant factors are probably worth
+  ;; worrying about
+  (prof/profile (dotimes [_ 500] (forms/->node test-node)))
+  (prof/profile (dotimes [_ 5000] (forms/->span test-node)))
+  (prof/generate-diffgraph 2 3 {})
+  (prof/generate-diffgraph 1 3 {})
   (prof/profile (dotimes [_ 5000]
                   (forms/->node (node/coerce
                                  '(1 2 [4 5 {:a :b :aa [sym sym-2]}])))))
