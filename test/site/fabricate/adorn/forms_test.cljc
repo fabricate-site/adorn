@@ -103,7 +103,7 @@
              (forms/node-attributes (node/coerce "abc"))))
     (t/is (= {:class "language-clojure string"
               :data-java-class "java.lang.String"}
-             (forms/node-attributes (node/coerce "abc") {:lang :clj}))
+             (forms/node-attributes (merge (node/coerce "abc") {:lang :clj})))
           "designated language should be supported")
     (t/is (= {:class "language-clojure string" :data-js-class "js/String"}
              (forms/node-attributes (forms/->node (node/coerce "abc")

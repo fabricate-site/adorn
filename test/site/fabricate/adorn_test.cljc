@@ -13,7 +13,7 @@
   ([node {:keys [display-type] :as opts}]
    (if (= :forms (node/tag node))
      (into [:span {:class "language-clojure custom-type"}]
-           (map custom-dispatch (node/children node)))
+           (map #(custom-dispatch (forms/->node %)) (node/children node)))
      ;; example elision of adorn-specific metadata
      (if (or (contains? node :display-type)
              (contains? (meta node) :display-type)
@@ -62,16 +62,18 @@
   (t/testing "dispatch"
     (t/is (some? (adorn/clj->hiccup :abc {})))
     (t/is (some? (adorn/clj->hiccup [:abc {:a 3} (fn [i] 3)] {})))
-    (t/is (= :custom (adorn/form-type
-                      (forms/->node (p/parse-string
-                                     "^{:node/display-type :custom} {:a 2}")))))
-
-    (t/is (= :custom (adorn/form-type
-                      (forms/->node ^{:node/display-type :custom} {:a 2} ))))
-
-    (let [str-hiccup    (adorn/clj->hiccup (p/parse-string
-                                            "^{:node/display-type :custom} {:a 2}"))
-          str-hiccup-2  (adorn/clj->hiccup "^{:node/display-type :custom} {:a 2}")
+    (t/is (= :custom
+             (adorn/form-type (forms/->node
+                               (p/parse-string
+                                "^{:node/display-type :custom} {:a 2}")))))
+    (t/is (= :custom
+             (adorn/form-type (forms/->node ^{:node/display-type :custom}
+                                            {:a 2}))))
+    (let [str-hiccup    (adorn/clj->hiccup
+                         (p/parse-string
+                          "^{:node/display-type :custom} {:a 2}"))
+          str-hiccup-2  (adorn/clj->hiccup
+                         "^{:node/display-type :custom} {:a 2}")
           expr-hiccup   (let [m ^{:node/display-type :custom} {:a 2}]
                           (adorn/clj->hiccup m))
           expr-hiccup-2 (adorn/clj->hiccup :kw {:display-type :custom})]
@@ -83,7 +85,6 @@
             "Dispatch based on :type metadata should work")
       (t/is (re-find #"custom" (get-in expr-hiccup-2 [1 :class]))
             "Dispatch based on option passed in should work"))))
-
 
 (t/deftest src-files
   (let [forms-parsed (parse-file "src/site/fabricate/adorn/forms.cljc")
@@ -97,9 +98,5 @@
 (comment
   (adorn/clj->hiccup (forms/->node (p/parse-string
                                     "^{:node/display-type :custom} {:a 2}")))
-
-  (adorn/form-type
-   (forms/->node (p/parse-string
-                  "^{:node/display-type :custom} {:a 2}")))
-
-  )
+  (adorn/form-type (forms/->node (p/parse-string
+                                  "^{:node/display-type :custom} {:a 2}"))))
