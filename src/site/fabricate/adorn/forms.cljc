@@ -42,35 +42,169 @@
 
 ;; this namespace generalizes from "node" to "form"
 
-(defn apply-node-metadata
-  "Returns the child node of the given metadata node with the metadata map applied to the node itself rather than the form.
+;; the approach I landed on here is similar to what clj-kondo does
+;; https://github.com/clj-kondo/clj-kondo/blob/master/src/clj_kondo/impl/metadata.clj
+;; here's how to split the difference (maybe):
+;; lift the metadata with the node prefix
+;; if there's nothing left, return the inner node with the metadata applied
+;; if there is something left, that may be something worth preserving in the
+;; output so then just return a metadata node
 
-  If passed a non-metadata node, return it as-is."
+(defn get-node-meta
+  "Get the metadata to apply to the node itself from within the form-level metadata."
+  [form-meta node-meta]
+  (cond (and (keyword? form-meta) (= "node" (namespace form-meta)))
+        (assoc (select-keys node-meta [:row :col :end-row :end-col])
+               (keyword (name form-meta))
+               true)
+        (keyword? form-meta) (select-keys node-meta
+                                          [:row :col :end-row :end-col])
+        (map? form-meta)     (reduce-kv (fn rename-node-k [m k v]
+                                          (if (and (or (keyword? k) (symbol? k))
+                                                   (= "node" (namespace k)))
+                                            (assoc m (keyword (name k)) v)
+                                            m))
+                                        (select-keys node-meta
+                                                     [:row :col :end-row
+                                                      :end-col])
+                                        form-meta)))
+
+(defn get-form-meta
+  "Get the form-level metadata by removing any keys with the :node namespace"
+  [form-meta]
+  (cond (and (keyword? form-meta) (= "node" (namespace form-meta))) {}
+        (keyword? form-meta) form-meta
+        (map? form-meta)     (reduce-kv
+                              (fn rm-node-k [m k v]
+                                (if (or (and (or (keyword? k) (symbol? k))
+                                             (not= "node" (namespace k)))
+                                        (not (or (keyword? k) (symbol? k))))
+                                  (assoc m k v)
+                                  m))
+                              {}
+                              form-meta)))
+
+;; this function gets called a lot, so going through the meta in one pass makes
+;; more sense.
+(defn split-node-metadata
+  [form-meta node-meta]
+  (let [kw-form?  (keyword? form-meta)
+        map-form? (map? form-meta)
+        node-meta {:src-info (select-keys node-meta
+                                          [:row :col :end-row :end-col])}]
+    (cond map-form? (reduce-kv
+                     (fn update-meta [m k v]
+                       (let [node-k?   (and (and (or (keyword? k) (symbol? k))
+                                                 (= "node" (namespace k))))
+                             renamed-k (if node-k? (keyword (name k)) k)]
+                         (cond (not node-k?) (assoc-in m [:form-meta k] v)
+                               node-k?       (assoc-in m
+                                              [:node-meta renamed-k]
+                                              v))))
+                     {:form-meta {} :node-meta node-meta}
+                     form-meta)
+          (and kw-form? (= "node" (namespace form-meta)))
+          {:form-meta {}
+           :node-meta (assoc node-meta (keyword (name form-meta)) true)}
+          kw-form?  {:form-meta form-meta :node-meta node-meta})))
+
+(def src-info-keys
+  "Keys used by rewrite-clj to record location info for a node"
+  #{:row :col :end-row :end-col})
+
+(def node-reserved-fields
+  "Keywords used by rewrite-clj to designate node fields"
+  #{:tag :format-string :wrap-length :seq-fn :children})
+
+(defn apply-node-metadata
+  "Rewrites the given node based on the type of metadata it has.
+
+  Metadata keywords beginning with the :node namespace prefix get applied to the node;
+  all other metadata remains with the node itself. If all the metadata begins with the
+  :node prefix, return the inner node with that metadata applied. Otherwise, return a
+  metadata node with the node-specific metadata lifted to the node and the remaining
+  metadata inside the node itself.
+
+  Non-metadata nodes are returned as-is."
   [node]
   (if (= :meta (tag node))
-    (let [existing-meta (meta node)
-          inner-node    (last (node/children node))
-          meta-map      (node/sexpr (first (node/children node)))]
-      (with-meta inner-node (merge existing-meta meta-map)))
+    (let [#_#_node-meta (meta node)
+          #_#_form-meta (first (node/child-sexprs node))
+          {:keys [node-meta form-meta]}
+          (split-node-metadata (first (node/child-sexprs node)) (meta node))
+          updated-node-meta (apply dissoc
+                                   node-meta
+                                   #_(get-node-meta form-meta node-meta)
+                                   node-reserved-fields)
+          updated-form-meta
+          #_(get-form-meta form-meta)
+          form-meta
+          node-data
+          #_(assoc (apply dissoc updated-node-meta src-info-keys)
+                   :src-info
+                   (select-keys updated-node-meta src-info-keys))
+          updated-node-meta]
+      (if (and (map? updated-form-meta) (empty? updated-form-meta))
+        (with-meta (merge (peek (:children node)) node-data) updated-node-meta)
+        (with-meta (assoc-in (merge node node-data)
+                    [:children 0]
+                    (node/coerce updated-form-meta))
+                   updated-node-meta)))
     node))
 
+(defn node-meta
+  [val-meta]
+  (reduce-kv (fn rename-node-k [m k v]
+               (if (and (keyword? k) (= "node" (namespace k)))
+                 (assoc m (keyword (name k)) v)
+                 m))
+             (select-keys val-meta [:row :col :end-row :end-col])
+             val-meta))
 
-;; TODO: recursively set lang on all subnodes
+(defn node-data
+  ([v opts]
+   (merge (node-meta (merge (meta v) opts))
+          (select-keys opts [:display-type :lang])
+          ;; value for if the node has been normalized
+          {:converted? true}))
+  ([v] (node-data v {})))
+
+;; TODO: should this be called ->form instead?
 (defn ->node
   ([i
-    {:keys [lang]
+    {:keys [lang update-subnodes?]
      :as   opts
      ;; default to platform lang if not provided
      :or   {lang #?(:clj :clj
-                    :cljs :cljs)}}]
-   (cond
-     ;; if it's a node, return it as-is
-     (node/node? i) (if (contains? i :lang) i (assoc i :lang lang))
-     ;; if it's a string, parse it
-     (string? i)    (assoc (p/parse-string-all i) :lang lang)
-     ;; otherwise, assume it's a form and coerce it
-     :default       (assoc (node/coerce i) :lang lang)))
+                    :cljs :cljs)
+            update-subnodes? false}}]
+   (let [node-val (apply-node-metadata (cond
+                                         ;; if it's a node, return it as-is
+                                         (node/node? i) i
+                                         ;; if it's a string, parse it
+                                         (string? i)    (p/parse-string-all i)
+                                         ;; otherwise, assume it's a form
+                                         ;; and coerce it
+                                         :default       (node/coerce i)))
+         opts     (assoc opts :lang lang)
+         data     (node-data i opts)]
+     (merge (if (and update-subnodes? (:children node-val))
+              (node/replace-children node-val
+                                     (mapv (fn update-cn [cn] (->node cn opts))
+                                           (node/children node-val)))
+              node-val)
+            data)))
   ([i] (->node i {})))
+
+
+(comment
+  (merge (node/coerce :abc) {:a 2})
+  (->node (node/coerce [1 {:a :b}]))
+  (->node (node/coerce "1"))
+  (->node ":abc")
+  (->node :abc {:lang :clj})
+  (->node ^{:node/display-type :custom :node/attr :val}
+          (p/parse-string-all ":abc")))
 
 
 (def node-html-classes
@@ -138,21 +272,27 @@
       :cljs js/Boolean)
    :boolean
    ;; splice in platform specific types
-   #?@(:clj [java.lang.Long :long java.lang.Integer :integer clojure.lang.BigInt
-             :big-int java.lang.String :string clojure.lang.Ratio :ratio
-             java.lang.Float :float java.lang.Double :double
-             java.math.BigDecimal :big-decimal java.lang.Class :class]
-       :cljs [js/Number :number js/String :string])})
+   #?@(:clj [java.lang.Long       :long
+             java.lang.Integer    :integer
+             clojure.lang.BigInt  :big-int
+             java.lang.String     :string
+             clojure.lang.Ratio   :ratio
+             java.lang.Float      :float
+             java.lang.Double     :double
+             java.math.BigDecimal :big-decimal
+             java.lang.Class      :class]
+       :cljs [js/Number :number
+              js/String :string])})
 
 
-;; the above lookup map may be "too clever" -
+  ;; the above lookup map may be "too clever" -
 ;; just going with (number? v) seems better
 ;; that platform info can be added later if it's present
 
 (defn literal-type
   "Return the literal type for the given token node.
 
-  Intended to be consistent across clj+cljs."
+                              Intended to be consistent across clj+cljs."
   [node]
   (cond (:lines node) :string
         (:k node) :keyword
@@ -183,7 +323,7 @@
    :list       {:clj 'clojure.lang.PersistentList :cljs 'cljs.core/List}})
 
 
-;; TODO: make this static with dynamic fallback
+  ;; TODO: make this static with dynamic fallback
 (defn node-class
   [{:keys [lang]
     :or   {lang #?(:clj :clj
@@ -191,24 +331,26 @@
     :as   node}]
   (let [nt (node-type node)] (get-in platform-classes [nt lang])))
 
-;; if the nodes are supposed to be optionally enriched with platform-specific
-;; information, then HTML data attributes are a good way to do that.
-;; (still annotate literal keywords, symbols, and vars with the values, though)
+  ;; if the nodes are supposed to be optionally enriched with platform-specific
+  ;; information, then HTML data attributes are a good way to do that.
+  ;; (still annotate literal keywords, symbols, and vars with the values,
+  ;; though)
 
 
-;; I think there should be a way to either augment or replace the default
-;; classes
-;; :classes key - augment defaults
-;; :class-name key - override defaults (including language-clojure)
+  ;; I think there should be a way to either augment or replace the default
+  ;; classes
+  ;; :classes key - augment defaults
+  ;; :class-name key - override defaults (including language-clojure)
 (defn node-attributes
   "Get the HTML element attributes for the given form.
 
-  Allows passing through arbitrary attributes (apart from the :class attr)."
+                              Allows passing through arbitrary attributes (apart from the :class attr)."
   ([{:keys [lang]
      :or   {lang #?(:clj :clj
                     :cljs :cljs)}
      :as   node} {:keys [class-name classes] :as attrs}]
-   (let [nt (node-type node)
+   (let [;lang (or lang (:lang attrs))
+         nt (node-type node)
          nc (node-class node)
          node-class-name (node-html-classes nt)]
      (merge {:class (or class-name
@@ -221,7 +363,7 @@
             (when (= :symbol nt) {:data-clojure-symbol (str node)})
             (when (= :keyword nt) {:data-clojure-keyword (str node)})
             (when (= :var nt) {:data-clojure-var (str node)})
-            (dissoc attrs :class-name :class :classes))))
+            (dissoc attrs :class-name :class :classes :lang))))
   ([node] (node-attributes node {})))
 
 (declare ->span)
@@ -241,14 +383,14 @@
 (defn symbol->span
   "Generate a Hiccup <span> data structure from the given symbol.
 
-  Separates the namespace from the symbol, if present."
+                              Separates the namespace from the symbol, if present."
   ([node attrs]
-   (let [sym      (node/sexpr node)
-         sym-ns   (namespace sym)
-         sym-name (name sym)
-         attrs    (node-attributes node attrs)]
+   (let [sym        (node/sexpr node)
+         sym-ns     (namespace sym)
+         sym-name   (name sym)
+         span-attrs (node-attributes node attrs)]
      (if sym-ns
-       [:span attrs
+       [:span span-attrs
         [:span {:class "language-clojure symbol-ns"} (escape-html sym-ns)] "/"
         [:span {:class "language-clojure symbol-name"} (escape-html sym-name)]]
        [:span attrs (escape-html sym-name)])))
@@ -258,14 +400,14 @@
 (defn keyword->span
   "Generate a Hiccup <span> data structure from the given keyword node.
 
-  Separates the namespace from the keyword, if present."
+                              Separates the namespace from the keyword, if present."
   ([node attrs]
-   (let [kw      (node/sexpr node)
-         kw-ns   (namespace kw)
-         kw-name (name kw)
-         attrs   (node-attributes node attrs)]
+   (let [kw         (node/sexpr node)
+         kw-ns      (namespace kw)
+         kw-name    (name kw)
+         span-attrs (node-attributes node attrs)]
      (if kw-ns
-       [:span attrs ":"
+       [:span span-attrs ":"
         [:span {:class "language-clojure keyword-ns"} (escape-html kw-ns)] "/"
         [:span {:class "language-clojure keyword-name"} (escape-html kw-name)]]
        [:span attrs ":" (escape-html kw-name)])))
@@ -273,13 +415,14 @@
 
 (defn whitespace->span
   ([node attrs]
-   (let [attrs (node-attributes node attrs)] [:span attrs (:whitespace node)]))
+   (let [span-attrs (node-attributes node attrs)]
+     [:span span-attrs (:whitespace node)]))
   ([node] (whitespace->span node {})))
 
 (defn newline->span
   ([node attrs]
-   (let [attrs (node-attributes node)]
-     (into [:span attrs] (repeat (count (:newlines node)) [:br]))))
+   (let [span-attrs (node-attributes node)]
+     (into [:span span-attrs] (repeat (count (:newlines node)) [:br]))))
   ([node] (newline->span node {})))
 
 (def tokens
@@ -307,12 +450,12 @@
          var-sym      (:value var-sym-node)
          var-ns       (namespace var-sym)
          var-name     (name var-sym)
-         attrs        (node-attributes node attrs)]
+         span-attrs   (node-attributes node attrs)]
      (if var-ns
-       [:span attrs (:dispatch tokens) "'"
+       [:span span-attrs (:dispatch tokens) "'"
         [:span {:class "language-clojure var-ns"} var-ns] "/"
         [:span {:class "language-clojure var-name"} var-name]]
-       [:span attrs (:dispatch tokens) "'" (str var-sym-node)])))
+       [:span span-attrs (:dispatch tokens) "'" (str var-sym-node)])))
   ([node] (var->span node {})))
 
 
@@ -327,73 +470,81 @@
   ([node attrs subform-fn]
    (let [nt          (node-type node)
          [start end] (get coll-delimiters nt)
-         attrs       (node-attributes node attrs)]
-     (conj (into [:span attrs start] (map subform-fn (node/children node)))
+         span-attrs  (node-attributes node attrs)]
+     (conj (into [:span span-attrs start]
+                 (map #(subform-fn % (select-keys attrs [:lang]))
+                      (node/children node)))
            end)))
   ([node attrs] (coll->span node attrs ->span))
   ([node] (coll->span node {})))
 
 (defn uneval->span
   ([node attrs subform-fn]
-   (let [attrs (node-attributes node attrs)]
-     (into [:span attrs (:dispatch tokens) "_"]
-           (map subform-fn (node/children node)))))
+   (let [span-attrs (node-attributes node attrs)]
+     (into [:span span-attrs (:dispatch tokens) "_"]
+           (map #(subform-fn % (select-keys attrs [:lang]))
+                (node/children node)))))
   ([node attrs] (uneval->span node attrs ->span))
   ([node] (uneval->span node {})))
 
 (defn meta->span
   ([node attrs subform-fn]
-   (let [attrs (node-attributes node attrs)]
-     (into [:span attrs (:caret tokens)]
-           (map subform-fn (node/children node)))))
+   (let [span-attrs (node-attributes node attrs)]
+     (into [:span span-attrs (:caret tokens)]
+           (map #(subform-fn % (select-keys attrs [:lang]))
+                (node/children node)))))
   ([node attrs] (meta->span node attrs ->span))
   ([node] (meta->span node {})))
 
 (defn quote->span
   ([node attrs subform-fn]
-   (let [attrs (node-attributes node attrs)]
-     (into [:span attrs (:quote tokens)]
-           (map subform-fn (node/children node)))))
+   (let [span-attrs (node-attributes node attrs)]
+     (into [:span span-attrs (:quote tokens)]
+           (map #(subform-fn % (select-keys attrs [:lang]))
+                (node/children node)))))
   ([node attrs] (quote->span node attrs ->span))
   ([node] (quote->span node {})))
 
 (defn unquote->span
   ([node attrs subform-fn]
-   (let [attrs (node-attributes node attrs)
-         tag   (tag node)]
+   (let [span-attrs (node-attributes node attrs)
+         tag        (tag node)]
      (into (if (= :unquote-splicing tag)
-             [:span attrs (:unquote tokens) "@"]
-             [:span attrs (:unquote tokens)])
-           (map subform-fn (node/children node)))))
+             [:span span-attrs (:unquote tokens) "@"]
+             [:span span-attrs (:unquote tokens)])
+           (map #(subform-fn % (select-keys attrs [:lang]))
+                (node/children node)))))
   ([node attrs] (unquote->span node attrs ->span))
   ([node] (unquote->span node {})))
 
 (defn syntax-quote->span
   ([node attrs subform-fn]
-   (let [attrs (node-attributes node attrs)]
-     (into [:span attrs (:syntax-quote tokens)]
-           (map subform-fn (node/children node)))))
+   (let [span-attrs (node-attributes node attrs)]
+     (into [:span span-attrs (:syntax-quote tokens)]
+           (map #(subform-fn % (select-keys attrs [:lang]))
+                (node/children node)))))
   ([node attrs] (syntax-quote->span node attrs ->span))
   ([node] (syntax-quote->span node {})))
 
 (defn comment->span
   ([node attrs]
-   (let [attrs (node-attributes node attrs)]
-     [:span attrs (:comment tokens) (:s node)]))
+   (let [span-attrs (node-attributes node attrs)]
+     [:span span-attrs (:comment tokens) (:s node)]))
   ([node] (comment->span node {})))
 
 (defn deref->span
   ([node attrs subform-fn]
-   (let [attrs (node-attributes node attrs)]
-     (into [:span attrs (:deref tokens)]
-           (map subform-fn (node/children node)))))
+   (let [span-attrs (node-attributes node attrs)]
+     (into [:span span-attrs (:deref tokens)]
+           (map #(subform-fn % (select-keys attrs [:lang]))
+                (node/children node)))))
   ([node attrs] (deref->span node attrs ->span))
   ([node] (deref->span node {})))
 
 
 (defn fn->span
   ([node attrs subform-fn]
-   (let [attrs       (node-attributes node attrs)
+   (let [span-attrs  (node-attributes node attrs)
          contents    (node/children node)
          [_ params body] (node/sexpr node)
          r           (cond (= 0 (count params)) {}
@@ -411,23 +562,26 @@
                               (z/of-node (node/coerce body))
                               (fn select [zloc] (symbol? (z/sexpr zloc)))
                               (fn visit [zloc] (z/edit zloc #(get r % %)))))]
-     (conj (into [:span attrs (:dispatch tokens) (:paren/open tokens)]
-                 (map subform-fn (node/children edited-node)))
+     (conj (into [:span span-attrs (:dispatch tokens) (:paren/open tokens)]
+                 (map #(subform-fn % (select-keys attrs [:lang]))
+                      (node/children edited-node)))
            (:paren/close tokens))))
   ([node attrs] (fn->span node attrs ->span))
   ([node] (fn->span node {})))
 
 (defn reader-cond->span
   ([node attrs subform-fn]
-   (let [attrs (node-attributes node attrs)]
-     (into [:span attrs (:dispatch tokens)]
-           (map subform-fn (node/children node)))))
+   (let [span-attrs (node-attributes node attrs)]
+     (into [:span span-attrs (:dispatch tokens)]
+           (map #(subform-fn % (select-keys attrs [:lang]))
+                (node/children node)))))
   ([node attrs] (reader-cond->span node attrs ->span))
   ([node] (reader-cond->span node {})))
 
 (defn ->span
   ([n attrs subform-fn]
-   (let [node (->node n)]
+   ;; only convert if necessary
+   (let [node (if (:converted? n) n (->node n (select-keys attrs [:lang])))]
      (case (tag node)
        :fn           (fn->span node attrs subform-fn)
        :meta         (meta->span node attrs subform-fn)
@@ -450,7 +604,9 @@
        :newline      (newline->span node attrs)
        :map          (coll->span node attrs subform-fn)
        :reader-macro (reader-cond->span node attrs subform-fn)
-       :forms        (apply list (map subform-fn (node/children node)))
+       :forms        (apply list
+                            (map #(subform-fn % (select-keys attrs [:lang]))
+                                 (node/children node)))
        [:span (node-attributes node {:classes ["unknown"]}) (str node)])))
   ([n attrs] (->span n attrs ->span))
   ([n] (->span n {})))
@@ -468,11 +624,3 @@
 
   Intended for 'higher-level' forms than rewrite-clj supports as node types"
   {:defn "defn-form" :let "let-form" :ns "ns-form"})
-
-
-(defn node-form-meta
-  "Get the metadata of the Clojure form contained in the given node.
-
-    Returns nil if node has no metadata or can't be converted to a s-expression."
-  [node]
-  (if (node/sexpr-able? node) (meta (node/sexpr node))))

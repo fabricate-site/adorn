@@ -5,26 +5,27 @@
             [rewrite-clj.parser :as parser]
             [rewrite-clj.node :as node]
             [taoensso.tufte :as t]
-            #?@(:cljs [[shadow.cljs.modern :refer [js-await]] ["fs" :as fs]])))
+            #?@(:cljs [#_[shadow.cljs.modern :refer [js-await]] ["fs" :as fs]]
+                :clj [clj-async-profiler.core :as prof])))
 
 (def clj-core-url
   "https://raw.githubusercontent.com/clojure/clojure/clojure-1.11.3/src/clj/clojure/core.clj")
 (declare clj-core)
 
-
-#?(:cljs (do (def core-atom (atom nil))
-             (.then (js/fetch clj-core-url)
-                    #(do (let [txt-promise (.text %)]
-                           (.then
-                            (fn [p] (reset! core-atom p) (println p))))))))
+(comment
+  #?(:cljs (do (def core-atom (atom nil))
+               (.then (js/fetch clj-core-url)
+                      #(do (let [txt-promise (.text %)]
+                             (.then
+                              (fn [p] (reset! core-atom p) (println p)))))))))
 
 
 
 ;; workaround to save and cache the file locally
-#?(:clj (spit "test-resources/clojure-core.clj" (slurp clj-core-url)))
+;; #?(:clj (spit "test-resources/clojure-core.clj" (slurp clj-core-url)))
 
 (def clj-core
-  #?(:clj (slurp clj-core-url)
+  #?(:clj (slurp #_clj-core-url "test-resources/clojure-core.clj")
      :cljs (.readFileSync fs "test-resources/clojure-core.clj" "utf8")))
 
 
@@ -44,44 +45,70 @@
   (parser/parse-string-all clj-core))
 
 (def core-sexprs "All of clojure.core as a do block" (node/sexpr core-parsed))
+(def core-converted
+  "A preconverted version of clojure.core"
+  (forms/->node core-parsed))
 
 (t/add-basic-println-handler! {})
 
 (t/profile {}
-           (dotimes [_ #?(:clj 50
-                          :cljs 15)]
-             (t/p :core-parse (parser/parse-string-all clj-core))
-             (t/p :multimethod/core-parse+adorn (adorn/clj->hiccup clj-core))
-             (t/p :multimethod/parsed+adorn (adorn/clj->hiccup core-parsed))
-             (t/p :multimethod/sexprs+adorn (adorn/clj->hiccup core-sexprs))
-             (t/p :fn/core-parse+adorn
-                  (-> clj-core
-                      parser/parse-string-all
-                      forms/->span))
-             (t/p :fn/parsed+adorn (forms/->span core-parsed))
-             (t/p :fn/sexprs+adorn (forms/->span core-sexprs))))
-
-;; mean execution time (JVM) just to parse the string is 59ms, which already
-;; puts highlighting core.clj at 60 FPS outside the realm of possibility.
-;; however, performance is pretty reasonable for such a huge file in the
-;; grand scheme of things: 170ms on average to parse and convert a
-;; 8KLoC file
+  (dotimes [_ #?(:clj 25
+                 :cljs 15)]
+    (t/p :core-parse (parser/parse-string-all clj-core))
+    (t/p :convert/parsed (forms/->node core-parsed))
+    (t/p :convert/sexpr (forms/->node core-sexprs))
+    (t/p :multimethod/core-parse+adorn (adorn/clj->hiccup clj-core))
+    (t/p :multimethod/parsed+adorn (adorn/clj->hiccup core-parsed))
+    (t/p :multimethod/converted+adorn
+         (adorn/clj->hiccup core-converted))
+    (t/p :multimethod/sexprs+adorn (adorn/clj->hiccup core-sexprs))
+    (t/p :fn/core-parse+adorn
+         (-> clj-core
+             parser/parse-string-all
+             forms/->span))
+    (t/p :fn/parsed+adorn (forms/->span core-parsed))
+    (t/p :fn/sexprs+adorn (forms/->span core-sexprs))
+    (t/p :fn/converted+adorn (forms/->span core-converted))
+    (t/p :sexpr/print (with-out-str (print core-sexprs)))))
 
 
 (t/profile {}
-           (dotimes [_ #?(:clj 50
-                          :cljs 15)]
-             ;; re-memoize ->span each iteration to make sure each test
-             ;; is under identical conditions
-             (with-redefs [forms/->span (memoize forms/->span)]
-               (t/p :memoized/core-parse+adorn
-                    (-> clj-core
-                        parser/parse-string-all
-                        forms/->span))
-               (t/p :memoized/parsed+adorn (forms/->span core-parsed))
-               (t/p :memoized/sexprs+adorn (forms/->span core-sexprs)))))
+  (dotimes [_ #?(:clj 15
+                 :cljs 15)]
+    ;; re-memoize ->span each iteration to make sure each test
+    ;; is under identical conditions
+    (with-redefs [forms/->span (memoize forms/->span)]
+      (t/p :memoized/core-parse+adorn
+           (-> clj-core
+               parser/parse-string-all
+               forms/->span))
+      (t/p :memoized/parsed+adorn (forms/->span core-parsed))
+      (t/p :memoized/converted+adorn (forms/->span core-converted))
+      (t/p :memoized/sexprs+adorn (forms/->span core-sexprs)))))
 
-;; 90th percentile performance for the pre-parsed core.clj code
-;; is 16ms - which is roughly 60FPS. In cljs it's 26ms, which is
-;; a little over 30FPS. That's pretty good for code that is otherwise
-;; fairly unoptimized.
+
+(comment
+  (def test-node (node/coerce '(1 2 [4 5 {:a :b :aa [sym sym-2]}])))
+  (def test-node-converted (forms/->node test-node))
+  (prof/clear-results)
+  (prof/profile (dotimes [_ 50] (forms/->span core-parsed)))
+  (prof/generate-diffgraph 2 1 {})
+  ;; this is a recursive fn, so the constant factors are probably worth
+  ;; worrying about
+  (prof/profile (dotimes [_ 500] (forms/->node test-node)))
+  (prof/profile (dotimes [_ 5000] (forms/->span test-node)))
+  (prof/generate-diffgraph 2 3 {})
+  (prof/generate-diffgraph 1 3 {})
+  (prof/profile (dotimes [_ 5000]
+                  (forms/->node (node/coerce
+                                 '(1 2 [4 5 {:a :b :aa [sym sym-2]}])))))
+  (t/profile {}
+    (dotimes [_ 1000]
+      (t/p :apply-list (apply list (range 1 50000)))
+      (t/p :apply-list-mapv
+           (apply list (mapv identity (range 1 50000))))
+      (t/p :seq (seq (range 1 50000)))
+      (t/p :doall (doall (range 1 50000)))))
+  (prof/profile (dotimes [_]))
+  (prof/stop)
+  (prof/serve-ui 8085))

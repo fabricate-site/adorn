@@ -9,6 +9,91 @@
                :cljs [cljs.test :as t])))
 
 
+(t/deftest node-data
+  (t/testing "node data lifting"
+    (let [node-1       (node/coerce
+                        ^{:type :something :node/type :something-else} {:a 1})
+          node-2       (node/coerce ^{:node/type :something-else} {:a 1})
+          str-vec-node (p/parse-string "^{:node/display-type :custom} [:abc]")
+          kw-only      (node/coerce ^:kw [1 2 3])
+          kw-only-str  (p/parse-string "^:kw [1 2 3]")]
+      (t/is
+       (= :vector (:tag (forms/apply-node-metadata str-vec-node)))
+       "forms with node-only metadata should be converted to the correct type after splitting")
+      (t/is
+       (= :map (:tag (forms/apply-node-metadata node-2)))
+       "Node metadata splitting should yield non-metadata nodes for node-only keywords")
+      (let [split-1 (forms/apply-node-metadata node-1)]
+        (t/is
+         (= :meta (:tag split-1))
+         "Node metadata splitting should yield metadata nodes for non-node keywords")
+        (t/is
+         (= [:something :something-else]
+            [(get-in split-1 [:children 0 :children 2 :k]) (:type split-1)])
+         "node metadata should be split appropriately and directly accessible on the resulting node"))
+      (let [kw-split (forms/apply-node-metadata kw-only-str)]
+        (t/is (= :meta (:tag kw-split))
+              "metadata splitting should work for keyword-only nodes")
+        (t/is (= [:kw [1 2 3]] (node/sexprs (:children kw-split)))))
+      (t/testing "expected data model"
+        (let [parsed-node
+              (-> "^{:node/type :example :node/display-type :example} [1]"
+                  (p/parse-string)
+                  (forms/apply-node-metadata))
+              conflict-node (forms/apply-node-metadata
+                             (node/coerce ^{:node/tag :custom} [1]))]
+          (t/is (and (= {:type         :example
+                         :display-type :example
+                         :src-info     {:row 1 :col 1 :end-row 1 :end-col 55}}
+                        (select-keys parsed-node
+                                     [:type :display-type :src-info])))
+                ":node-prefixed keywords should be merged")
+          (t/is (not (= :custom (:tag conflict-node)))
+                "reserved rewrite-clj tags should be ignored"))))
+    (t/is (= :custom
+             (:display-type (forms/->node (with-meta (p/parse-string-all ":abc")
+                                                     {:node/display-type :custom
+                                                      :node/attr :val})))))
+    (t/is (contains? (forms/->node (with-meta (p/parse-string-all ":abc")
+                                              {:node/display-type :custom
+                                               :node/attr         :val}))
+                     :display-type))
+    (t/is (= :clj (:lang (forms/->node :abc {:lang :clj}))))
+    ;; *should* these be coerced into non-metadata nodes?
+    #_(t/is (= :val (:attr (forms/->node (node/coerce ^{:node/attr :val} [])))))
+    #_(t/is (= :val
+               (:attr (forms/->node (node/coerce
+                                     (with-meta [] {:node/attr :val}))))))
+    (t/is (= :val (:attr (forms/->node (node/coerce []) {:node/attr :val})))
+          "node data should be set manually if present in the opts"))
+  (t/testing "node normalization"
+    (t/is (= :clj (:lang (forms/->node (node/coerce "1") {:lang :clj}))))
+    (t/is (= #?(:clj :clj
+                :cljs :cljs)
+             (get-in (forms/->node (node/coerce [1 {:a :b}])
+                                   {:update-subnodes? true})
+                     [:children 1 :lang]))
+          "node :lang should be set recursively for all child nodes")
+    (t/is (= :map
+             (-> (node/coerce [1 {:a :b}])
+                 (forms/->node {:lang :cljs :update-subnodes? true})
+                 :children
+                 last
+                 :tag))
+          "subnodes should have correct types after updating")
+    (t/is (= :custom
+             (-> (node/coerce [1 ^{:node/display-type :custom} {:a :b}])
+                 (forms/->node {:update-subnodes? true})
+                 :children
+                 last
+                 meta
+                 (get :display-type)))
+          "node metadata should be split recursively for all child nodes")))
+
+(comment
+  (forms/->node (node/coerce [1 ^{:node/display-type :custom} {:a :b}]))
+  (meta (forms/apply-node-metadata (node/coerce ^{:node/display-type :custom}
+                                                {:a :b}))))
 
 (t/deftest attributes
   (t/testing "HTML attributes"
@@ -16,6 +101,14 @@
               #?@(:clj [:data-java-class "java.lang.String"]
                   :cljs [:data-js-class "js/String"])}
              (forms/node-attributes (node/coerce "abc"))))
+    (t/is (= {:class "language-clojure string"
+              :data-java-class "java.lang.String"}
+             (forms/node-attributes (merge (node/coerce "abc") {:lang :clj})))
+          "designated language should be supported")
+    (t/is (= {:class "language-clojure string" :data-js-class "js/String"}
+             (forms/node-attributes (forms/->node (node/coerce "abc")
+                                                  {:lang :cljs})))
+          "designated language should be supported")
     (t/is (= {:class "language-clojure string mystr"
               #?@(:clj [:data-java-class "java.lang.String"]
                   :cljs [:data-js-class "js/String"])}
@@ -26,6 +119,14 @@
                   :cljs [:data-js-class "js/String"])}
              (forms/node-attributes (node/coerce "abc") {:class-name "mystr"}))
           "Class overrides should be supported")
+    (t/is (= "js/String"
+             (get-in (forms/->span (node/coerce "b") {:lang :cljs})
+                     [1 :data-js-class]))
+          "Language overrides should be supported")
+    (t/is (= "js/String"
+             (get-in (forms/->span [1 2 3 ["b"]] {:lang :cljs})
+                     [9 3 1 :data-js-class]))
+          "Language overrides should be supported")
     (t/is (= {:class "language-clojure symbol"
               :data-clojure-symbol "my/sym"
               #?@(:clj [:data-java-class "clojure.lang.Symbol"]
@@ -69,14 +170,12 @@
   (t/is (= [:span
             {#?@(:clj [:data-java-class "java.lang.String"]
                  :cljs [:data-js-class "js/String"])
-             :class
-             "language-clojure string"} "str"]
+             :class "language-clojure string"} "str"]
            (forms/token->span (node/string-node "str"))))
   (t/is (= [:span
             {#?@(:clj [:data-java-class "java.lang.String"]
                  :cljs [:data-js-class "js/String"])
-             :class
-             "language-clojure string multi-line"} "line1" [:br] "line2"]
+             :class "language-clojure string multi-line"} "line1" [:br] "line2"]
            (forms/token->span (node/string-node ["line1" "line2"]))))
   (doseq [token     (mapv node/coerce
                           [1 1.2
@@ -134,17 +233,7 @@
                             (forms/->span (node/coerce [1 2 3])
                                           {}
                                           (constantly :placeholder)))))
-          "function overrides should work for child nodes")
-    (t/testing "metadata"
-      (let [lifted   (forms/apply-node-metadata (node/coerce ^{:k :v} []))
-            lifted-2 (forms/apply-node-metadata (p/parse-string "^{:k :v} []"))]
-        (t/is (= :vector (node/tag lifted))
-              "Metadata application should yield child node")
-        (t/is (= {:k :v} (meta lifted)) "Metadata should be applied properly")
-        (t/is (contains? (meta lifted-2) :col)
-              "Applied metadata should be merged")
-        (t/is (= :vector
-                 (node/tag (forms/apply-node-metadata (node/coerce []))))))))
+          "function overrides should work for child nodes"))
   (t/testing "special forms"
     ;; not quite in the sense that Clojure uses the term
     ;; https://clojure.org/reference/special_forms
@@ -183,4 +272,7 @@
     (t/testing "src files"
       (clojure.walk/postwalk check-class (forms/->span forms-parsed)))
     (t/testing "test files"
-      (clojure.walk/postwalk check-class (forms/->span test-parsed)))))
+      (clojure.walk/postwalk check-class (forms/->span test-parsed)))
+    #_(doseq [form (:children forms-parsed)]
+        (try (forms/->span form)
+             (catch Exception e #_(tap> form) (println form))))))

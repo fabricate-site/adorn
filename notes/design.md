@@ -25,7 +25,7 @@ Controlled display of subforms can be achieved if you pass through a map with sp
 (clj->hiccup 
  {"term1" "definition 1"
   "term2" "definition 2"}
- {:display/type :map->dl})
+ {:display-type :map->dl})
 
 ;; dispatch occurs
 
@@ -44,7 +44,7 @@ Now say you've got a vector of maps you want to turn into `<dl>` elements in the
 (clj->hiccup
  [{"term1" "definition 1"
    "term2" "definition 2"}]
- {:display/type :div
+ {:display-type :div
   :display/overrides
   {:map :map->dl}})
 
@@ -60,7 +60,7 @@ An alternative model for dispatch:
 (clj->hiccup
  [{"term1" "definition 1"
    "term2" "definition 2"}]
- {:display/type 
+ {:display-type 
   {:map {:string :escape-string}
    :vector #'vec->list
    :*root (fn vec->dl [vec]
@@ -102,7 +102,7 @@ Another idea: once a form is generated, I can use `rewrite-clj` to alter it for 
 
 ## Metadata
 
-A node can _have_ metadata without _being_ a metadata node. Rewrite-clj nodes use metadata to preserve the line and column information for the source strings or files they were parsed from, when this information is present. This distinction suggests that `->node` may be able to perform the appropriate dispatch for values that only have the `:display/type` metadata set.
+A node can _have_ metadata without _being_ a metadata node. Rewrite-clj nodes use metadata to preserve the line and column information for the source strings or files they were parsed from, when this information is present. This distinction suggests that `->node` may be able to perform the appropriate dispatch for values that only have the `:display-type` metadata set.
 
 Maintaining this distinction may not be as easy for nodes parsed from files or strings, unless I can intercept or override part of the protocol that parses text into nodes.
 
@@ -114,16 +114,19 @@ Here's a potentially general-purpose way of handling this beyond just `adorn` - 
 
 ```clojure
 
-^{:rewrite-clj/node-meta {:display/type :veclist}} [1 2 3 4]
+^{:rewrite-clj/node-meta {:display-type :veclist}} [1 2 3 4]
 
-;; results in a vector node with {:display/type :veclist} merged with its other metadata
+;; results in a vector node with {:display-type :veclist} merged with its other metadata
 
 ```
 This could be an escape hatch, allowing forms to pass metadata upward to rewrite-clj so they're set as attributes of the nodes and therefore elided when displaying the results.
 
 I think this is a pragmatic choice before `adorn`'s API has fully stabilized. It could be used as a concrete example to point to in discussions of proposed changes or additions to `rewrite-clj` itself - see below for additional context.
 
-Another idea worth considering: `:node-type` as top level metadata that automatically gets elided and applied to the form after parsing, instead of making users repeatedly go through two hops: `:rewrite-clj/node-meta`and `:display/type` - ergonomics are important to consider here.
+Another idea worth considering: `:node-type` as top level metadata that automatically gets elided and applied to the form after parsing, instead of making users repeatedly go through two hops: `:rewrite-clj/node-meta`and `:display-type` - ergonomics are important to consider here. However, these should be equivalent: the shorthand should "expand" into the longhand. This may be easier to accomplish with namespaced keywords: `:node/display-type` expands into `:display-type`. This can offer a more general mechanism for adding node-level metadata.
+
+An idea that may or may not be good: a specific reader conditional for rewrite-clj nodes that can both set metadata and `assoc` keys into the node object.
+
 
 An idea that may or may not be good: a specific reader conditional for rewrite-clj nodes that can both set metadata and `assoc` keys into the node object.
 
@@ -136,3 +139,13 @@ I'm not the only one who has found the default way of handling metadata in rewri
 There has also been an idea for [node skipping](https://github.com/clj-commons/rewrite-clj/blob/main/doc/design/custom-node-skipping.adoc), which could potentially be used to "step into" metadata nodes and rewrite them using the child elements. This method would be another way of achieving a similar result. However, there are two main limitiations:
 1. custom node skipping is not yet implemented; it is just an idea.
 2. it relies heavily on the zipper API, which `adorn` does not currently use.
+
+### From metadata to data
+
+If metadata is used this regularly, maybe I should just reify it as data. It is easy to `assoc` additional keys into a `Node`. This means defining a data model and convention for additional keys that `adorn` adds to nodes. Initial ideas:
+
+- `:display-type` - how to display the node
+- `:lang` - the language (`:clj`, `:cljs`)
+- `:src-info` - the metadata resulting from parsing: `:row`, `:col`, `:end-row`, `:end-col`
+
+`:display-type` and `:lang` can both be overridden using the above `:node` prefix convention: `:node/display-type` and `:node/lang`. `:src-info` should not be overridden.

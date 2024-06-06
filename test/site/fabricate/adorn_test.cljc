@@ -10,23 +10,20 @@
                :cljs [cljs.test :as t])))
 
 (defn custom-dispatch
-  [node]
-  (if (= :forms (node/tag node))
-    ;; this is fine, just pass in the options
-    (apply list (map custom-dispatch (node/children node)))
-    (let [form-meta (forms/node-form-meta node)]
-      ;; example elision of adorn-specific metadata
-      (if (contains? :display/type form-meta)
-        ;; TODO: investigate first/peek further
-        (let [child-node  (last (node/children node))
-              node-tag    (node/tag child-node)
-              tag-method  (get-method adorn/node->hiccup node-tag)
-              node-hiccup (tag-method node)]
-          (update-in node-hiccup [1 :class] str " custom-type"))
-        (let [node-tag    (node/tag node)
-              tag-method  (get-method adorn/node->hiccup node-tag)
-              node-hiccup (tag-method node)]
-          (update-in node-hiccup [1 :class] str " custom-type"))))))
+  ([node {:keys [display-type] :as opts}]
+   (if (= :forms (node/tag node))
+     (into [:span {:class "language-clojure custom-type"}]
+           (map #(custom-dispatch (forms/->node %)) (node/children node)))
+     ;; example elision of adorn-specific metadata
+     (if (or (contains? node :display-type)
+             (contains? (meta node) :display-type)
+             display-type)
+       ;; TODO: investigate first/peek further
+       (let [node-tag    (node/tag node)
+             tag-method  (get-method adorn/node->hiccup node-tag)
+             node-hiccup (tag-method node)]
+         (update-in node-hiccup [1 :class] str " custom-type"))
+       node))))
 
 ;; ultimately this likely means providing a convenience higher-order
 ;; function to make it easier for users to dispatch "the right way"
@@ -37,8 +34,8 @@
 
 
 (defmethod adorn/node->hiccup :custom
-  ([node _opts] (custom-dispatch node))
-  ([node] (custom-dispatch node)))
+  ([node opts] (custom-dispatch node opts))
+  ([node] (custom-dispatch node {})))
 
 (defn parse-file
   [f]
@@ -58,29 +55,36 @@
 (t/deftest api
   (t/testing "node info + metadata"
     (t/is (= :custom
-             (adorn/form-type (forms/->node
-                               "^{:display/type :custom} {:a 2}"))))
+             (adorn/form-type (forms/->node "{:a 2}" {:display-type :custom}))))
     (t/is (= :custom
-             (adorn/form-type (forms/->node ^{:display/type :custom} {:a 2})))))
+             (adorn/form-type (forms/->node ^{:node/display-type :custom}
+                                            {:a 2})))))
   (t/testing "dispatch"
     (t/is (some? (adorn/clj->hiccup :abc {})))
     (t/is (some? (adorn/clj->hiccup [:abc {:a 3} (fn [i] 3)] {})))
-    ;; TODO: why do these have a missing caret?
-    (let [str-hiccup    (adorn/clj->hiccup (p/parse-string
-                                            "^{:display/type :custom} {:a 2}"))
-          str-hiccup-2  (adorn/clj->hiccup "^{:display/type :custom} {:a 2}")
-          expr-hiccup   (let [m ^{:display/type :custom} {:a 2}]
+    (t/is (= :custom
+             (adorn/form-type (forms/->node
+                               (p/parse-string
+                                "^{:node/display-type :custom} {:a 2}")))))
+    (t/is (= :custom
+             (adorn/form-type (forms/->node ^{:node/display-type :custom}
+                                            {:a 2}))))
+    (let [str-hiccup    (adorn/clj->hiccup
+                         (p/parse-string
+                          "^{:node/display-type :custom} {:a 2}"))
+          str-hiccup-2  (adorn/clj->hiccup
+                         "^{:node/display-type :custom} {:a 2}")
+          expr-hiccup   (let [m ^{:node/display-type :custom} {:a 2}]
                           (adorn/clj->hiccup m))
-          expr-hiccup-2 (adorn/clj->hiccup :kw {:display/type :custom})]
+          expr-hiccup-2 (adorn/clj->hiccup :kw {:display-type :custom})]
       (t/is (re-find #"custom" (get-in str-hiccup [1 :class]))
-            "Dispatch based on :type metadata should work")
+            "Dispatch based on :node/display-type metadata should work")
       (t/is (re-find #"custom" (get-in (first str-hiccup-2) [1 :class] ""))
-            "Dispatch based on :type metadata should work")
+            "Dispatch based on :node/display-type metadata should work")
       (t/is (re-find #"custom" (get-in expr-hiccup [1 :class]))
             "Dispatch based on :type metadata should work")
       (t/is (re-find #"custom" (get-in expr-hiccup-2 [1 :class]))
             "Dispatch based on option passed in should work"))))
-
 
 (t/deftest src-files
   (let [forms-parsed (parse-file "src/site/fabricate/adorn/forms.cljc")
@@ -90,3 +94,9 @@
       (clojure.walk/postwalk check-class (forms/->span forms-parsed)))
     (t/testing "test files"
       (clojure.walk/postwalk check-class (forms/->span test-parsed)))))
+
+(comment
+  (adorn/clj->hiccup (forms/->node (p/parse-string
+                                    "^{:node/display-type :custom} {:a 2}")))
+  (adorn/form-type (forms/->node (p/parse-string
+                                  "^{:node/display-type :custom} {:a 2}"))))

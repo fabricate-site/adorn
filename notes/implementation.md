@@ -48,7 +48,7 @@ I think the potential for confusion here is pretty high. this aspect of the API 
 Here's one idea of how it might work - this requires writing the custom dispatch in a
 pretty structured way.
 
-if there is a metadata node with the `:display/type` key, the _last child_ node of that node should inherit the :display/type key from the metadata node.
+if there is a metadata node with the `:display-type` key, the _last child_ node of that node should inherit the :display-type key from the metadata node.
 
 this implies that the custom class annotation will live _inside_ the resulting metadata span element rather than at the top level of that form, because of the way that they are grouped together.
 
@@ -62,3 +62,9 @@ but that default perhaps should be questioned - just because rewrite-clj represe
 The version of `forms/->node` on `main` does almost nothing, so it's not surprising that it has much higher performance than a version that recursively updates all subnodes. The real question is: why doesn't the recursive transformation save time when actually converting the node? Is it just because the overhead of visiting all subnodes twice washes out the potential performance benefits of converting the nodes "up front"?
 
 A diffgraph comparing overall node conversion between the `main` and `node-data` branches will illuminate more here than just a comparison between the `->node` implementations.
+
+When `->node` is called up front on the form to be converted, the double visitation problem disappears. This suggests that `->node` conversion could be made lazier and more efficient if rewritten to be called "just in time" when node conversion is about to happen, as long as the upper-level form data gets propagated downwards to subforms for appropriate conversion. 
+
+The increase in self-time for the parts of the call stack that directly overlap also indicates that constant factors are slowing performance. The difference for a small data structure is (understandably) small. Surprisingly, a performance comparsion with a pre-converted node shows that `node-data` is slightly _faster_ than `main` when both are operating on a pre-converted version of `core.clj`. 
+
+This indicates to me that the performance regression is fixable.

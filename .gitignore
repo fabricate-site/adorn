@@ -16,3 +16,4 @@ generated/
 /.shadow-cljs/
 /node_modules/
 test-resources/clojure-core.clj
+.dir-locals.el
