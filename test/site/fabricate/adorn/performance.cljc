@@ -4,10 +4,9 @@
             [site.fabricate.adorn.forms :as forms]
             [rewrite-clj.parser :as parser]
             [rewrite-clj.node :as node]
-            [clj-async-profiler.core :as prof]
             [taoensso.tufte :as t]
-            #?@(:cljs [#_[shadow.cljs.modern :refer [js-await]]
-                       ["fs" :as fs]])))
+            #?@(:cljs [#_[shadow.cljs.modern :refer [js-await]] ["fs" :as fs]]
+                :clj [clj-async-profiler.core :as prof])))
 
 (def clj-core-url
   "https://raw.githubusercontent.com/clojure/clojure/clojure-1.11.3/src/clj/clojure/core.clj")
