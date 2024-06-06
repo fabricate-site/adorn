@@ -68,3 +68,11 @@ When `->node` is called up front on the form to be converted, the double visitat
 The increase in self-time for the parts of the call stack that directly overlap also indicates that constant factors are slowing performance. The difference for a small data structure is (understandably) small. Surprisingly, a performance comparsion with a pre-converted node shows that `node-data` is slightly _faster_ than `main` when both are operating on a pre-converted version of `core.clj`. 
 
 This indicates to me that the performance regression is fixable.
+
+**2024-06-06**
+
+Pre-conversion was the wrong solution. It sped up the Hiccup conversion at the cost of traversing the node twice, which wiped out any performance benefit that pre-normalization would have offered.
+
+Performance took a hit with the merging of the `node-data` branch, but it was mostly a "constant factors" thing. Future optimizations will require more detailed measurement. 
+
+Those measurements can inform the design of an experiment to see if protocols offer the performance benefit I think they may. `extend-via-metadata` may offer the flexibility I need from multimethods without the performance penalty. 
