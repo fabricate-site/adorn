@@ -52,11 +52,11 @@
                 "reserved rewrite-clj tags should be ignored"))))
     (t/is (= :custom
              (:display-type (forms/->node (with-meta (p/parse-string-all ":abc")
-                                            {:node/display-type :custom
-                                             :node/attr :val})))))
+                                                     {:node/display-type :custom
+                                                      :node/attr :val})))))
     (t/is (contains? (forms/->node (with-meta (p/parse-string-all ":abc")
-                                     {:node/display-type :custom
-                                      :node/attr         :val}))
+                                              {:node/display-type :custom
+                                               :node/attr         :val}))
                      :display-type))
     (t/is (= :clj (:lang (forms/->node :abc {:lang :clj}))))
     ;; *should* these be coerced into non-metadata nodes?
@@ -101,6 +101,14 @@
               #?@(:clj [:data-java-class "java.lang.String"]
                   :cljs [:data-js-class "js/String"])}
              (forms/node-attributes (node/coerce "abc"))))
+    (t/is (= {:class "language-clojure string"
+              :data-java-class "java.lang.String"}
+             (forms/node-attributes (node/coerce "abc") {:lang :clj}))
+          "designated language should be supported")
+    (t/is (= {:class "language-clojure string" :data-js-class "js/String"}
+             (forms/node-attributes (forms/->node (node/coerce "abc")
+                                                  {:lang :cljs})))
+          "designated language should be supported")
     (t/is (= {:class "language-clojure string mystr"
               #?@(:clj [:data-java-class "java.lang.String"]
                   :cljs [:data-js-class "js/String"])}
@@ -111,6 +119,14 @@
                   :cljs [:data-js-class "js/String"])}
              (forms/node-attributes (node/coerce "abc") {:class-name "mystr"}))
           "Class overrides should be supported")
+    (t/is (= "js/String"
+             (get-in (forms/->span (node/coerce "b") {:lang :cljs})
+                     [1 :data-js-class]))
+          "Language overrides should be supported")
+    (t/is (= "js/String"
+             (get-in (forms/->span [1 2 3 ["b"]] {:lang :cljs})
+                     [9 3 1 :data-js-class]))
+          "Language overrides should be supported")
     (t/is (= {:class "language-clojure symbol"
               :data-clojure-symbol "my/sym"
               #?@(:clj [:data-java-class "clojure.lang.Symbol"]

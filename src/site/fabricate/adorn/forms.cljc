@@ -99,8 +99,8 @@
                              renamed-k (if node-k? (keyword (name k)) k)]
                          (cond (not node-k?) (assoc-in m [:form-meta k] v)
                                node-k?       (assoc-in m
-                                                       [:node-meta renamed-k]
-                                                       v))))
+                                              [:node-meta renamed-k]
+                                              v))))
                      {:form-meta {} :node-meta node-meta}
                      form-meta)
           (and kw-form? (= "node" (namespace form-meta)))
@@ -147,9 +147,9 @@
       (if (and (map? updated-form-meta) (empty? updated-form-meta))
         (with-meta (merge (peek (:children node)) node-data) updated-node-meta)
         (with-meta (assoc-in (merge node node-data)
-                             [:children 0]
-                             (node/coerce updated-form-meta))
-          updated-node-meta)))
+                    [:children 0]
+                    (node/coerce updated-form-meta))
+                   updated-node-meta)))
     node))
 
 (defn node-meta
@@ -163,8 +163,7 @@
 
 (defn node-data
   ([v opts]
-   (merge (node-meta (meta v))
-          (node-meta opts)
+   (merge (node-meta (merge (meta v) opts))
           (select-keys opts [:display-type :lang])
           ;; value for if the node has been normalized
           {:converted? true}))
@@ -350,7 +349,8 @@
      :or   {lang #?(:clj :clj
                     :cljs :cljs)}
      :as   node} {:keys [class-name classes] :as attrs}]
-   (let [nt (node-type node)
+   (let [;lang (or lang (:lang attrs))
+         nt (node-type node)
          nc (node-class node)
          node-class-name (node-html-classes nt)]
      (merge {:class (or class-name
@@ -363,7 +363,7 @@
             (when (= :symbol nt) {:data-clojure-symbol (str node)})
             (when (= :keyword nt) {:data-clojure-keyword (str node)})
             (when (= :var nt) {:data-clojure-var (str node)})
-            (dissoc attrs :class-name :class :classes))))
+            (dissoc attrs :class-name :class :classes :lang))))
   ([node] (node-attributes node {})))
 
 (declare ->span)
@@ -385,12 +385,12 @@
 
                               Separates the namespace from the symbol, if present."
   ([node attrs]
-   (let [sym      (node/sexpr node)
-         sym-ns   (namespace sym)
-         sym-name (name sym)
-         attrs    (node-attributes node attrs)]
+   (let [sym        (node/sexpr node)
+         sym-ns     (namespace sym)
+         sym-name   (name sym)
+         span-attrs (node-attributes node attrs)]
      (if sym-ns
-       [:span attrs
+       [:span span-attrs
         [:span {:class "language-clojure symbol-ns"} (escape-html sym-ns)] "/"
         [:span {:class "language-clojure symbol-name"} (escape-html sym-name)]]
        [:span attrs (escape-html sym-name)])))
@@ -402,12 +402,12 @@
 
                               Separates the namespace from the keyword, if present."
   ([node attrs]
-   (let [kw      (node/sexpr node)
-         kw-ns   (namespace kw)
-         kw-name (name kw)
-         attrs   (node-attributes node attrs)]
+   (let [kw         (node/sexpr node)
+         kw-ns      (namespace kw)
+         kw-name    (name kw)
+         span-attrs (node-attributes node attrs)]
      (if kw-ns
-       [:span attrs ":"
+       [:span span-attrs ":"
         [:span {:class "language-clojure keyword-ns"} (escape-html kw-ns)] "/"
         [:span {:class "language-clojure keyword-name"} (escape-html kw-name)]]
        [:span attrs ":" (escape-html kw-name)])))
@@ -415,13 +415,14 @@
 
 (defn whitespace->span
   ([node attrs]
-   (let [attrs (node-attributes node attrs)] [:span attrs (:whitespace node)]))
+   (let [span-attrs (node-attributes node attrs)]
+     [:span span-attrs (:whitespace node)]))
   ([node] (whitespace->span node {})))
 
 (defn newline->span
   ([node attrs]
-   (let [attrs (node-attributes node)]
-     (into [:span attrs] (repeat (count (:newlines node)) [:br]))))
+   (let [span-attrs (node-attributes node)]
+     (into [:span span-attrs] (repeat (count (:newlines node)) [:br]))))
   ([node] (newline->span node {})))
 
 (def tokens
@@ -449,12 +450,12 @@
          var-sym      (:value var-sym-node)
          var-ns       (namespace var-sym)
          var-name     (name var-sym)
-         attrs        (node-attributes node attrs)]
+         span-attrs   (node-attributes node attrs)]
      (if var-ns
-       [:span attrs (:dispatch tokens) "'"
+       [:span span-attrs (:dispatch tokens) "'"
         [:span {:class "language-clojure var-ns"} var-ns] "/"
         [:span {:class "language-clojure var-name"} var-name]]
-       [:span attrs (:dispatch tokens) "'" (str var-sym-node)])))
+       [:span span-attrs (:dispatch tokens) "'" (str var-sym-node)])))
   ([node] (var->span node {})))
 
 
@@ -469,73 +470,81 @@
   ([node attrs subform-fn]
    (let [nt          (node-type node)
          [start end] (get coll-delimiters nt)
-         attrs       (node-attributes node attrs)]
-     (conj (into [:span attrs start] (map subform-fn (node/children node)))
+         span-attrs  (node-attributes node attrs)]
+     (conj (into [:span span-attrs start]
+                 (map #(subform-fn % (select-keys attrs [:lang]))
+                      (node/children node)))
            end)))
   ([node attrs] (coll->span node attrs ->span))
   ([node] (coll->span node {})))
 
 (defn uneval->span
   ([node attrs subform-fn]
-   (let [attrs (node-attributes node attrs)]
-     (into [:span attrs (:dispatch tokens) "_"]
-           (map subform-fn (node/children node)))))
+   (let [span-attrs (node-attributes node attrs)]
+     (into [:span span-attrs (:dispatch tokens) "_"]
+           (map #(subform-fn % (select-keys attrs [:lang]))
+                (node/children node)))))
   ([node attrs] (uneval->span node attrs ->span))
   ([node] (uneval->span node {})))
 
 (defn meta->span
   ([node attrs subform-fn]
-   (let [attrs (node-attributes node attrs)]
-     (into [:span attrs (:caret tokens)]
-           (map subform-fn (node/children node)))))
+   (let [span-attrs (node-attributes node attrs)]
+     (into [:span span-attrs (:caret tokens)]
+           (map #(subform-fn % (select-keys attrs [:lang]))
+                (node/children node)))))
   ([node attrs] (meta->span node attrs ->span))
   ([node] (meta->span node {})))
 
 (defn quote->span
   ([node attrs subform-fn]
-   (let [attrs (node-attributes node attrs)]
-     (into [:span attrs (:quote tokens)]
-           (map subform-fn (node/children node)))))
+   (let [span-attrs (node-attributes node attrs)]
+     (into [:span span-attrs (:quote tokens)]
+           (map #(subform-fn % (select-keys attrs [:lang]))
+                (node/children node)))))
   ([node attrs] (quote->span node attrs ->span))
   ([node] (quote->span node {})))
 
 (defn unquote->span
   ([node attrs subform-fn]
-   (let [attrs (node-attributes node attrs)
-         tag   (tag node)]
+   (let [span-attrs (node-attributes node attrs)
+         tag        (tag node)]
      (into (if (= :unquote-splicing tag)
-             [:span attrs (:unquote tokens) "@"]
-             [:span attrs (:unquote tokens)])
-           (map subform-fn (node/children node)))))
+             [:span span-attrs (:unquote tokens) "@"]
+             [:span span-attrs (:unquote tokens)])
+           (map #(subform-fn % (select-keys attrs [:lang]))
+                (node/children node)))))
   ([node attrs] (unquote->span node attrs ->span))
   ([node] (unquote->span node {})))
 
 (defn syntax-quote->span
   ([node attrs subform-fn]
-   (let [attrs (node-attributes node attrs)]
-     (into [:span attrs (:syntax-quote tokens)]
-           (map subform-fn (node/children node)))))
+   (let [span-attrs (node-attributes node attrs)]
+     (into [:span span-attrs (:syntax-quote tokens)]
+           (map #(subform-fn % (select-keys attrs [:lang]))
+                (node/children node)))))
   ([node attrs] (syntax-quote->span node attrs ->span))
   ([node] (syntax-quote->span node {})))
 
 (defn comment->span
   ([node attrs]
-   (let [attrs (node-attributes node attrs)]
-     [:span attrs (:comment tokens) (:s node)]))
+   (let [span-attrs (node-attributes node attrs)]
+     [:span span-attrs (:comment tokens) (:s node)]))
   ([node] (comment->span node {})))
 
 (defn deref->span
   ([node attrs subform-fn]
-   (let [attrs (node-attributes node attrs)]
-     (into [:span attrs (:deref tokens)]
-           (map subform-fn (node/children node)))))
+   (let [span-attrs (node-attributes node attrs)]
+     (into [:span span-attrs (:deref tokens)]
+           (map #(subform-fn % (select-keys attrs [:lang]))
+                (node/children node)))))
   ([node attrs] (deref->span node attrs ->span))
   ([node] (deref->span node {})))
 
 
 (defn fn->span
   ([node attrs subform-fn]
-   (let [attrs       (node-attributes node attrs)
+   (let [span-attrs  (node-attributes node attrs)
          contents    (node/children node)
          [_ params body] (node/sexpr node)
          r           (cond (= 0 (count params)) {}
@@ -553,24 +562,26 @@
                               (z/of-node (node/coerce body))
                               (fn select [zloc] (symbol? (z/sexpr zloc)))
                               (fn visit [zloc] (z/edit zloc #(get r % %)))))]
-     (conj (into [:span attrs (:dispatch tokens) (:paren/open tokens)]
-                 (map subform-fn (node/children edited-node)))
+     (conj (into [:span span-attrs (:dispatch tokens) (:paren/open tokens)]
+                 (map #(subform-fn % (select-keys attrs [:lang]))
+                      (node/children edited-node)))
            (:paren/close tokens))))
   ([node attrs] (fn->span node attrs ->span))
   ([node] (fn->span node {})))
 
 (defn reader-cond->span
   ([node attrs subform-fn]
-   (let [attrs (node-attributes node attrs)]
-     (into [:span attrs (:dispatch tokens)]
-           (map subform-fn (node/children node)))))
+   (let [span-attrs (node-attributes node attrs)]
+     (into [:span span-attrs (:dispatch tokens)]
+           (map #(subform-fn % (select-keys attrs [:lang]))
+                (node/children node)))))
   ([node attrs] (reader-cond->span node attrs ->span))
   ([node] (reader-cond->span node {})))
 
 (defn ->span
   ([n attrs subform-fn]
    ;; only convert if necessary
-   (let [node (if (:converted? n) n (->node n))]
+   (let [node (if (:converted? n) n (->node n (select-keys attrs [:lang])))]
      (case (tag node)
        :fn           (fn->span node attrs subform-fn)
        :meta         (meta->span node attrs subform-fn)
@@ -593,7 +604,9 @@
        :newline      (newline->span node attrs)
        :map          (coll->span node attrs subform-fn)
        :reader-macro (reader-cond->span node attrs subform-fn)
-       :forms        (apply list (map subform-fn (node/children node)))
+       :forms        (apply list
+                            (map #(subform-fn % (select-keys attrs [:lang]))
+                                 (node/children node)))
        [:span (node-attributes node {:classes ["unknown"]}) (str node)])))
   ([n attrs] (->span n attrs ->span))
   ([n] (->span n {})))
