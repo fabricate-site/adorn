@@ -1,30 +1,30 @@
-{:aliases {:cljs  {:extra-deps  {org.clojure/clojurescript {:mvn/version
-                                                            "1.11.54"}
-                                 thheller/shadow-cljs      {:mvn/version
-                                                            "2.28.2"}}
-                   :extra-paths ["test"]}
-           :serve {:deps      {org.babashka/http-server {:mvn/version "0.1.12"}}
-                   :exec-args {:dir     "dev/html"
-                               :headers {"Cross-Origin-Opener-Policy"
-                                         "same-origin"}
-                               :port    8888}
-                   :exec-fn   babashka.http-server/exec
-                   :main-opts ["-m" "babashka.http-server"]}
-           :site  {:extra-deps  {com.kiranshila/cybermonday {:mvn/version
-                                                             "0.6.215"}
-                                 dev.onionpancakes/chassis  {:mvn/version
-                                                             "1.0.353"}}
-                   :extra-paths ["dev"]}
-           :test  {:exec-fn cognitect.test-runner.api/test
-                   :extra-deps {com.taoensso/tufte     {:mvn/version "2.6.3"}
-                                com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.2.1"}
-                                io.github.cognitect-labs/test-runner
-                                {:git/url
-                                 "https://github.com/cognitect-labs/test-runner"
-                                 :sha
-                                 "7284cda41fb9edc0f3bc6b6185cfb7138fc8a023"}
-                                org.clojure/test.check {:mvn/version "1.1.1"}}
-                   :extra-paths ["test"]
-                   :jvm-opts ["-Djdk.attach.allowAttachSelf"]
-                   }}
- :deps    {rewrite-clj/rewrite-clj {:mvn/version "1.1.47"}}}
+{:aliases
+ {:cljs  {:extra-deps  {org.clojure/clojurescript {:mvn/version "1.11.54"}
+                        thheller/shadow-cljs      {:mvn/version "2.28.2"}}
+          :extra-paths ["test"]}
+  :serve {:deps      {org.babashka/http-server {:mvn/version "0.1.12"}}
+          :exec-args {:dir     "dev/html"
+                      :headers {"Cross-Origin-Opener-Policy" "same-origin"}
+                      :port    8888}
+          :exec-fn   babashka.http-server/exec
+          :main-opts ["-m" "babashka.http-server"]}
+  :site  {:extra-deps  {com.kiranshila/cybermonday {:mvn/version "0.6.215"}
+                        dev.onionpancakes/chassis  {:mvn/version "1.0.353"}}
+          :extra-paths ["dev"]}
+  :test  {:exec-fn     cognitect.test-runner.api/test
+          :extra-deps  {com.clojure-goes-fast/clj-async-profiler {:mvn/version
+                                                                  "1.2.1"}
+                        com.lambdaisland/hiccup   {:mvn/version "0.7.42"}
+                        com.taoensso/tufte        {:mvn/version "2.6.3"}
+                        dev.onionpancakes/chassis {:mvn/version "1.0.353"}
+                        hiccup/hiccup             {:mvn/version "2.0.0-RC3"}
+                        hiccups/hiccups           {:mvn/version "0.3.0"}
+                        io.github.borkdude/html   {:mvn/version "0.1.1"}
+                        io.github.cognitect-labs/test-runner
+                        {:git/url
+                         "https://github.com/cognitect-labs/test-runner"
+                         :sha "7284cda41fb9edc0f3bc6b6185cfb7138fc8a023"}
+                        org.clojure/test.check    {:mvn/version "1.1.1"}}
+          :extra-paths ["test"]
+          :jvm-opts    ["-Djdk.attach.allowAttachSelf"]}}
+ :deps {rewrite-clj/rewrite-clj {:mvn/version "1.1.47"}}}

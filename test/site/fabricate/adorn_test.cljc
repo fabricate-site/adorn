@@ -100,3 +100,32 @@
                                     "^{:node/display-type :custom} {:a 2}")))
   (adorn/form-type (forms/->node (p/parse-string
                                   "^{:node/display-type :custom} {:a 2}"))))
+
+(defn test-element
+  [element html-conv expected-html]
+  {:element       element
+   :expected-html expected-html
+   :result-html   (html-conv (adorn/clj->hiccup element))})
+
+(def simple-form [:a :b :c])
+
+(def simple-html
+  "<span class=\"language-clojure vector\"><span class=\"bracket-open\">[</span><span class=\"language-clojure keyword\" data-clojure-keyword=\":a\" data-java-class=\"clojure.lang.Keyword\">:a</span><span class=\"language-clojure whitespace\"> </span><span class=\"language-clojure keyword\" data-clojure-keyword=\":b\" data-java-class=\"clojure.lang.Keyword\">:b</span><span class=\"language-clojure whitespace\"> </span><span class=\"language-clojure keyword\" data-clojure-keyword=\":c\" data-java-class=\"clojure.lang.Keyword\">:c</span><span class=\"bracket-close\">]</span></span>")
+
+;; equivalence needs to be better defined, because the order
+;; of node attributes cannot be relied upon - they're unordered maps
+
+(t/deftest compatibility
+  (require '[borkdude.html]
+           #?@(:clj ['[dev.onionpancakes.chassis.core :as chassis]
+                     '[hiccup.core :as hiccup] '[hiccup2.core :as hiccup2]
+                     '[lambdaisland.hiccup :as li-hiccup]]
+               :cljs ['[hiccups.core :as hiccups]]))
+  (t/testing "equivalence of conversions"
+    (doseq [converter-fn [#_#'hiccup/html #_#'hiccup2/html #'chassis/html]]
+      (t/testing (str "for " converter-fn)
+        (let [{:keys [result-html expected-html]}
+              (test-element simple-form (var-get converter-fn) simple-html)]
+          (t/is (= expected-html result-html)
+                (str "HTML conversion should work for " converter-fn))))))
+  (t/testing "passthrough for escaped / raw string elements"))
