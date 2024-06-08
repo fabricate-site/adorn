@@ -1,13 +1,21 @@
 (ns site.fabricate.adorn-test
+  #?(:cljs (:require-macros [hiccups.core :as hiccups :refer [html]]))
   (:require [site.fabricate.adorn.forms :as forms]
             [site.fabricate.adorn :as adorn]
             [rewrite-clj.node :as node]
             [rewrite-clj.parser :as p]
             [clojure.string :as string]
+            [lambdaisland.deep-diff2 :as ddiff]
+            [taipei-404.html :refer [html->hiccup]]
+            [borkdude.html]
             #?(:cljs [cljs.reader :as reader])
             #?(:cljs ["fs" :as fs])
             #?(:clj [clojure.test :as t]
-               :cljs [cljs.test :as t])))
+               :cljs [cljs.test :as t])
+            #?@(:clj [[lambdaisland.hiccup :as li-hiccup]
+                      [dev.onionpancakes.chassis.core :as chassis]
+                      [hiccup.core :as hiccup] [hiccup2.core :as hiccup2]]
+                :cljs [[hiccups.runtime]])))
 
 (defn custom-dispatch
   ([node {:keys [display-type] :as opts}]
@@ -112,20 +120,30 @@
 (def simple-html
   "<span class=\"language-clojure vector\"><span class=\"bracket-open\">[</span><span class=\"language-clojure keyword\" data-clojure-keyword=\":a\" data-java-class=\"clojure.lang.Keyword\">:a</span><span class=\"language-clojure whitespace\"> </span><span class=\"language-clojure keyword\" data-clojure-keyword=\":b\" data-java-class=\"clojure.lang.Keyword\">:b</span><span class=\"language-clojure whitespace\"> </span><span class=\"language-clojure keyword\" data-clojure-keyword=\":c\" data-java-class=\"clojure.lang.Keyword\">:c</span><span class=\"bracket-close\">]</span></span>")
 
-;; equivalence needs to be better defined, because the order
-;; of node attributes cannot be relied upon - they're unordered maps
+(comment
+  (str (borkdude.html/html (adorn/clj->hiccup simple-form))))
+
+(defn compare-html
+  ;; TODO: define equivalence in terms of DOM nodes for cljs
+  ;; using the `.isEqualNode` API
+  [expected actual]
+  (let [expected-hiccup (html->hiccup expected)
+        actual-hiccup (html->hiccup actual)
+        eq? (= expected-hiccup actual-hiccup)]
+    (when-not eq?
+      (ddiff/pretty-print (ddiff/minimize (ddiff/diff expected-hiccup
+                                                      actual-hiccup))))
+    (t/is eq? "Hiccup should be equivalent")))
+
 
 (t/deftest compatibility
-  (require '[borkdude.html]
-           #?@(:clj ['[dev.onionpancakes.chassis.core :as chassis]
-                     '[hiccup.core :as hiccup] '[hiccup2.core :as hiccup2]
-                     '[lambdaisland.hiccup :as li-hiccup]]
-               :cljs ['[hiccups.core :as hiccups]]))
   (t/testing "equivalence of conversions"
-    (doseq [converter-fn [#_#'hiccup/html #_#'hiccup2/html #'chassis/html]]
-      (t/testing (str "for " converter-fn)
-        (let [{:keys [result-html expected-html]}
-              (test-element simple-form (var-get converter-fn) simple-html)]
-          (t/is (= expected-html result-html)
-                (str "HTML conversion should work for " converter-fn))))))
+    (doseq [converter-fn [#_(fn borkdude-html [e] (str (borkdude.html/html e)))
+                          #?@(:clj [(fn hiccup2-html [e] (str (hiccup2/html e)))
+                                    (fn hiccup-html [e] (hiccup/html e))
+                                    chassis/html]
+                              :cljs [(fn hiccups-html [e] (hiccups/html e))])]]
+      (let [{:keys [result-html expected-html]}
+            (test-element simple-form converter-fn simple-html)]
+        (compare-html expected-html result-html))))
   (t/testing "passthrough for escaped / raw string elements"))
