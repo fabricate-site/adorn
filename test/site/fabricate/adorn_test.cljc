@@ -113,15 +113,13 @@
   [element html-conv expected-html]
   {:element       element
    :expected-html expected-html
-   :result-html   (html-conv (adorn/clj->hiccup element))})
+   :result-html   (html-conv (adorn/clj->hiccup element {:lang :clj}))})
 
 (def simple-form [:a :b :c])
 
 (def simple-html
   "<span class=\"language-clojure vector\"><span class=\"bracket-open\">[</span><span class=\"language-clojure keyword\" data-clojure-keyword=\":a\" data-java-class=\"clojure.lang.Keyword\">:a</span><span class=\"language-clojure whitespace\"> </span><span class=\"language-clojure keyword\" data-clojure-keyword=\":b\" data-java-class=\"clojure.lang.Keyword\">:b</span><span class=\"language-clojure whitespace\"> </span><span class=\"language-clojure keyword\" data-clojure-keyword=\":c\" data-java-class=\"clojure.lang.Keyword\">:c</span><span class=\"bracket-close\">]</span></span>")
 
-(comment
-  (str (borkdude.html/html (adorn/clj->hiccup simple-form))))
 
 (defn compare-html
   ;; TODO: define equivalence in terms of DOM nodes for cljs
