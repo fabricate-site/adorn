@@ -52,11 +52,11 @@
                 "reserved rewrite-clj tags should be ignored"))))
     (t/is (= :custom
              (:display-type (forms/->node (with-meta (p/parse-string-all ":abc")
-                                                     {:node/display-type :custom
-                                                      :node/attr :val})))))
+                                            {:node/display-type :custom
+                                             :node/attr :val})))))
     (t/is (contains? (forms/->node (with-meta (p/parse-string-all ":abc")
-                                              {:node/display-type :custom
-                                               :node/attr         :val}))
+                                     {:node/display-type :custom
+                                      :node/attr         :val}))
                      :display-type))
     (t/is (= :clj (:lang (forms/->node :abc {:lang :clj}))))
     ;; *should* these be coerced into non-metadata nodes?
@@ -68,6 +68,10 @@
           "node data should be set manually if present in the opts"))
   (t/testing "node normalization"
     (t/is (= :clj (:lang (forms/->node (node/coerce "1") {:lang :clj}))))
+    (t/is (= :clj
+             (:lang (forms/->node (forms/->node (node/coerce "1")
+                                                {:lang :clj}))))
+          "normalization should be idempotent")
     (t/is (= #?(:clj :clj
                 :cljs :cljs)
              (get-in (forms/->node (node/coerce [1 {:a :b}])
@@ -88,7 +92,21 @@
                  last
                  meta
                  (get :display-type)))
-          "node metadata should be split recursively for all child nodes")))
+          "node metadata should be split recursively for all child nodes")
+    (t/is (= "cljs.core/Keyword"
+             (get-in (forms/->span (forms/->node :a {:lang :cljs}))
+                     [1 :data-js-class]))
+          ":lang option should carry through to results")
+    (t/is (= "cljs.core/Keyword"
+             (get-in (forms/->span :a {:lang :cljs}) [1 :data-js-class]))
+          ":lang option should carry through to results")
+    (t/is (= "clojure.lang.Keyword"
+             (get-in (forms/->span :a {:lang :clj}) [1 :data-java-class]))
+          ":lang option should carry through to results")
+    (t/is (= "clojure.lang.Keyword"
+             (get-in (forms/->span (forms/->node :a {:lang :clj}))
+                     [1 :data-java-class]))
+          ":lang option should carry through to results")))
 
 (comment
   (forms/->node (node/coerce [1 ^{:node/display-type :custom} {:a :b}]))
