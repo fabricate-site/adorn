@@ -6,7 +6,6 @@
             [rewrite-clj.parser :as p]
             [rewrite-clj.zip :as z]))
 
-
 (defn form-type
   "Get the type of the node for display, defaulting to the tag returned by `forms/node-type`.
 
@@ -156,12 +155,12 @@
   ([node] (forms/->span (forms/->node node) {} node->hiccup)))
 
 
-(comment
-  (form-type (forms/->node "^{:display-type :custom} {:a 2}")))
 
 (defn clj->hiccup
   "Convert the given Clojure string, expression, or rewrite-clj node to a Hiccup data structure.
 
   Uses the multimethod `site.fabricate.adorn/node->hiccup` for dispatch."
-  ([src opts] (node->hiccup (forms/->node src) opts))
+  ([src opts]
+   (node->hiccup (forms/->node src (select-keys opts [:lang :update-subnodes?]))
+                 opts))
   ([src] (clj->hiccup src {})))

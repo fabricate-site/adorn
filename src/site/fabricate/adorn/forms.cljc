@@ -178,22 +178,26 @@
      :or   {lang #?(:clj :clj
                     :cljs :cljs)
             update-subnodes? false}}]
-   (let [node-val (apply-node-metadata (cond
-                                         ;; if it's a node, return it as-is
-                                         (node/node? i) i
-                                         ;; if it's a string, parse it
-                                         (string? i)    (p/parse-string-all i)
-                                         ;; otherwise, assume it's a form
-                                         ;; and coerce it
-                                         :default       (node/coerce i)))
-         opts     (assoc opts :lang lang)
-         data     (node-data i opts)]
-     (merge (if (and update-subnodes? (:children node-val))
-              (node/replace-children node-val
-                                     (mapv (fn update-cn [cn] (->node cn opts))
-                                           (node/children node-val)))
-              node-val)
-            data)))
+   (if (:converted? i)
+     i
+     (let [node-val (apply-node-metadata (cond
+                                           ;; if it's a node, return it
+                                           ;; as-is
+                                           (node/node? i) i
+                                           ;; if it's a string, parse it
+                                           (string? i)    (p/parse-string-all i)
+                                           ;; otherwise, assume it's a
+                                           ;; form and coerce it
+                                           :default       (node/coerce i)))
+           opts     (assoc opts :lang lang)
+           data     (node-data i opts)]
+       (merge (if (and update-subnodes? (:children node-val))
+                (node/replace-children node-val
+                                       (mapv (fn update-cn [cn]
+                                               (->node cn opts))
+                                             (node/children node-val)))
+                node-val)
+              data))))
   ([i] (->node i {})))
 
 

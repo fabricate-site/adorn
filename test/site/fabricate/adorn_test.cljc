@@ -51,8 +51,22 @@
         f)
     f))
 
-
 (t/deftest api
+  (t/testing ":lang option"
+    (t/is (= "cljs.core/Keyword"
+             (get-in (adorn/clj->hiccup (forms/->node :a {:lang :cljs}))
+                     [1 :data-js-class]))
+          ":lang option should carry through to results")
+    (t/is (= "cljs.core/Keyword"
+             (get-in (adorn/clj->hiccup :a {:lang :cljs}) [1 :data-js-class]))
+          ":lang option should carry through to results")
+    (t/is (= "clojure.lang.Keyword"
+             (get-in (adorn/clj->hiccup :a {:lang :clj}) [1 :data-java-class]))
+          ":lang option should carry through to results")
+    (t/is (= "clojure.lang.Keyword"
+             (get-in (adorn/clj->hiccup (forms/->node :a {:lang :clj}))
+                     [1 :data-java-class]))
+          ":lang option should carry through to results"))
   (t/testing "node info + metadata"
     (t/is (= :custom
              (adorn/form-type (forms/->node "{:a 2}" {:display-type :custom}))))
