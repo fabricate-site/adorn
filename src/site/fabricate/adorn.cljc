@@ -36,6 +36,13 @@
 
 
 ;; TODO: figure out attribute passthrough for subnodes
+;; write a specification for the options first, then
+;; revise the implementations to dispatch the options accordingly
+;; a reasonable starting point might be to make the options
+;; consistent across the functions in the forms namespace
+;; and the multimethods in the adorn namespace
+;; (e.g. :attrs as a key in an options map in forms/->span rather than a
+;; top-level argument)
 
 (defmethod node->hiccup :display/fn
   [node opts]

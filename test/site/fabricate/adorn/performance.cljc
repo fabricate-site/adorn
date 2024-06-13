@@ -6,7 +6,7 @@
             [rewrite-clj.node :as node]
             [taoensso.tufte :as t]
             #?@(:cljs [#_[shadow.cljs.modern :refer [js-await]] ["fs" :as fs]]
-                :clj [clj-async-profiler.core :as prof])))
+                :clj [[clj-async-profiler.core :as prof]])))
 
 (def clj-core-url
   "https://raw.githubusercontent.com/clojure/clojure/clojure-1.11.3/src/clj/clojure/core.clj")
@@ -52,39 +52,39 @@
 (t/add-basic-println-handler! {})
 
 (t/profile {}
-  (dotimes [_ #?(:clj 25
-                 :cljs 15)]
-    (t/p :core-parse (parser/parse-string-all clj-core))
-    (t/p :convert/parsed (forms/->node core-parsed))
-    (t/p :convert/sexpr (forms/->node core-sexprs))
-    (t/p :multimethod/core-parse+adorn (adorn/clj->hiccup clj-core))
-    (t/p :multimethod/parsed+adorn (adorn/clj->hiccup core-parsed))
-    (t/p :multimethod/converted+adorn
-         (adorn/clj->hiccup core-converted))
-    (t/p :multimethod/sexprs+adorn (adorn/clj->hiccup core-sexprs))
-    (t/p :fn/core-parse+adorn
-         (-> clj-core
-             parser/parse-string-all
-             forms/->span))
-    (t/p :fn/parsed+adorn (forms/->span core-parsed))
-    (t/p :fn/sexprs+adorn (forms/->span core-sexprs))
-    (t/p :fn/converted+adorn (forms/->span core-converted))
-    (t/p :sexpr/print (with-out-str (print core-sexprs)))))
+           (dotimes [_ #?(:clj 25
+                          :cljs 15)]
+             (t/p :core-parse (parser/parse-string-all clj-core))
+             (t/p :convert/parsed (forms/->node core-parsed))
+             (t/p :convert/sexpr (forms/->node core-sexprs))
+             (t/p :multimethod/core-parse+adorn (adorn/clj->hiccup clj-core))
+             (t/p :multimethod/parsed+adorn (adorn/clj->hiccup core-parsed))
+             (t/p :multimethod/converted+adorn
+                  (adorn/clj->hiccup core-converted))
+             (t/p :multimethod/sexprs+adorn (adorn/clj->hiccup core-sexprs))
+             (t/p :fn/core-parse+adorn
+                  (-> clj-core
+                      parser/parse-string-all
+                      forms/->span))
+             (t/p :fn/parsed+adorn (forms/->span core-parsed))
+             (t/p :fn/sexprs+adorn (forms/->span core-sexprs))
+             (t/p :fn/converted+adorn (forms/->span core-converted))
+             (t/p :sexpr/print (with-out-str (print core-sexprs)))))
 
 
 (t/profile {}
-  (dotimes [_ #?(:clj 15
-                 :cljs 15)]
-    ;; re-memoize ->span each iteration to make sure each test
-    ;; is under identical conditions
-    (with-redefs [forms/->span (memoize forms/->span)]
-      (t/p :memoized/core-parse+adorn
-           (-> clj-core
-               parser/parse-string-all
-               forms/->span))
-      (t/p :memoized/parsed+adorn (forms/->span core-parsed))
-      (t/p :memoized/converted+adorn (forms/->span core-converted))
-      (t/p :memoized/sexprs+adorn (forms/->span core-sexprs)))))
+           (dotimes [_ #?(:clj 15
+                          :cljs 15)]
+             ;; re-memoize ->span each iteration to make sure each test
+             ;; is under identical conditions
+             (with-redefs [forms/->span (memoize forms/->span)]
+               (t/p :memoized/core-parse+adorn
+                    (-> clj-core
+                        parser/parse-string-all
+                        forms/->span))
+               (t/p :memoized/parsed+adorn (forms/->span core-parsed))
+               (t/p :memoized/converted+adorn (forms/->span core-converted))
+               (t/p :memoized/sexprs+adorn (forms/->span core-sexprs)))))
 
 
 (comment
@@ -103,12 +103,45 @@
                   (forms/->node (node/coerce
                                  '(1 2 [4 5 {:a :b :aa [sym sym-2]}])))))
   (t/profile {}
-    (dotimes [_ 1000]
-      (t/p :apply-list (apply list (range 1 50000)))
-      (t/p :apply-list-mapv
-           (apply list (mapv identity (range 1 50000))))
-      (t/p :seq (seq (range 1 50000)))
-      (t/p :doall (doall (range 1 50000)))))
+             (dotimes [_ 1000]
+               (t/p :apply-list (apply list (range 1 50000)))
+               (t/p :apply-list-mapv
+                    (apply list (mapv identity (range 1 50000))))
+               (t/p :seq (seq (range 1 50000)))
+               (t/p :doall (doall (range 1 50000)))))
   (prof/profile (dotimes [_]))
   (prof/stop)
   (prof/serve-ui 8085))
+
+
+(comment
+  (require '[clojure.walk :as walk])
+  ;; this is the basic kind of operation that could allow for
+  ;; a meaningful comparison of performance against the existing
+  ;; implementation
+  (defn walk-conv
+    [node]
+    (walk/walk #(if (node/node? %) (assoc % :type :custom) %)
+               #(assoc % :type :custom :lang :clj)
+               node))
+  (defn mapv-conv
+    [node]
+    (let [rn (assoc node :type :custom)]
+      (if (:children node)
+        (node/replace-children rn
+                               (mapv (fn update-cn [cn] (mapv-conv cn))
+                                     (node/children node)))
+        rn)))
+  (def example-node
+    (node/coerce [:abc [1 2 3 [4 5] :d :e [:f :g [:h [:i [:j [:k]]]]]]]))
+  (node/node? (walk-conv example-node))
+  (t/profile {}
+    (dotimes [i 10000]
+      (t/p :walk (walk-conv example-node))
+      (t/p :mapv (mapv-conv example-node))))
+  ;; the performance difference here is ENORMOUS even for a basic
+  ;; operation
+  (t/profile {}
+    (dotimes [i 500]
+      (t/p :walk (walk-conv core-parsed))
+      (t/p :mapv (mapv-conv core-parsed)))))

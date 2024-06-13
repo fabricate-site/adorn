@@ -170,6 +170,7 @@
   ([v] (node-data v {})))
 
 ;; TODO: should this be called ->form instead?
+;; also fix the recursion
 (defn ->node
   ([i
     {:keys [lang update-subnodes?]
