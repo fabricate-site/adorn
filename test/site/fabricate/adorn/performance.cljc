@@ -136,12 +136,35 @@
     (node/coerce [:abc [1 2 3 [4 5] :d :e [:f :g [:h [:i [:j [:k]]]]]]]))
   (node/node? (walk-conv example-node))
   (t/profile {}
-    (dotimes [i 10000]
-      (t/p :walk (walk-conv example-node))
-      (t/p :mapv (mapv-conv example-node))))
+             (dotimes [i 10000]
+               (t/p :walk (walk-conv example-node))
+               (t/p :mapv (mapv-conv example-node))))
   ;; the performance difference here is ENORMOUS even for a basic
   ;; operation
   (t/profile {}
+             (dotimes [i 500]
+               (t/p :walk (walk-conv core-parsed))
+               (t/p :mapv (mapv-conv core-parsed)))))
+
+
+(comment
+  ;; performance comparsion of node standardization
+  ;;
+  (t/profile
+   {}
+   (dotimes [i 10000]
+     (t/p :->form (forms/->form example-node {:update-subnodes? true}))
+     (t/p :->node (forms/->node example-node {:update-subnodes? true}))))
+  (t/profile {}
     (dotimes [i 500]
-      (t/p :walk (walk-conv core-parsed))
-      (t/p :mapv (mapv-conv core-parsed)))))
+      (t/p :->form (forms/->form core-parsed {:update-subnodes? true}))
+      (t/p :->node
+                    (forms/->node core-parsed {:update-subnodes? true}))))
+  (prof/profile (dotimes [_ 5000]
+                  (forms/->form example-node {:update-subnodes? true})))
+  (prof/profile (dotimes [_ 5000]
+                  (forms/->node example-node {:update-subnodes? true})))
+  (prof/profile (dotimes [_ 5000]
+                  (forms/->form core-parsed {:update-subnodes? true})))
+  (prof/profile (dotimes [_ 500]
+                  (forms/->node core-parsed {:update-subnodes? true}))))

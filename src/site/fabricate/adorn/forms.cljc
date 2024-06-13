@@ -4,7 +4,8 @@
             [rewrite-clj.parser :as p]
             [rewrite-clj.zip :as z]
             [rewrite-clj.node.stringz]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [clojure.walk :as walk]))
 
 
 ;; should escaping be done by this library?
@@ -169,6 +170,52 @@
           {:converted? true}))
   ([v] (node-data v {})))
 
+(declare ->form)
+
+;; data model for node->form normalization
+
+;; a form is defined as a rewrite-clj node that
+;; has additional attributes as required by `adorn`,
+;; and has been simplified so that those attributes
+;; are applied to the nodes themselves in a uniform way.
+
+;; this node rewriting is necessary because the additional
+;; attributes are populated from the metadata applied to the
+;; source of the node.
+
+(defn get-node
+  "Return a rewrite-clj node from the given value.
+
+  If the value is already a node, return it as is.
+  Parses a string into a `FormsNode` with `rewrite-clj.parser/parse-string-all`.
+  Otherwise, coerces the given Clojure value using `rewrite-clj.node/coerce`."
+  [value]
+  (cond (node/node? value) value
+        (string? value)    (p/parse-string-all value)
+        :default           (node/coerce value)))
+
+(defn ->form
+  [value
+   {:keys [lang update-subnodes?]
+    :or   {lang #?(:clj :clj
+                   :cljs :cljs)
+           update-subnodes? false}
+    :as   opts}]
+  (if (and (node/node? value) (:converted? value))
+    value
+    (let [node-value (assoc (apply-node-metadata (get-node value))
+                            :lang       lang
+                            :converted? true)]
+      (if update-subnodes?
+        (walk/walk
+         (fn [v]
+           (if (node/node? v)
+             (assoc (apply-node-metadata value) :lang lang :converted? true)
+             v))
+         identity
+         node-value)
+        node-value))))
+
 ;; TODO: should this be called ->form instead?
 ;; also fix the recursion
 (defn ->node
@@ -191,6 +238,8 @@
                                            ;; form and coerce it
                                            :default       (node/coerce i)))
            opts     (assoc opts :lang lang)
+           ;; this really shouldn't be a separate function from
+           ;; apply-node-metadata
            data     (node-data i opts)]
        (merge (if (and update-subnodes? (:children node-val))
                 (node/replace-children node-val
