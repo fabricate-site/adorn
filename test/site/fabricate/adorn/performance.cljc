@@ -4,7 +4,11 @@
             [site.fabricate.adorn.forms :as forms]
             [rewrite-clj.parser :as parser]
             [rewrite-clj.node :as node]
+            [rewrite-clj.node.protocols :as node-proto]
+            [rewrite-clj.zip :as z]
+            [clojure.zip :as zip]
             [taoensso.tufte :as t]
+            [clojure.walk :as walk]
             #?@(:cljs [#_[shadow.cljs.modern :refer [js-await]] ["fs" :as fs]]
                 :clj [[clj-async-profiler.core :as prof]])))
 
@@ -91,7 +95,7 @@
   (def test-node (node/coerce '(1 2 [4 5 {:a :b :aa [sym sym-2]}])))
   (def test-node-converted (forms/->node test-node))
   (prof/clear-results)
-  (prof/profile (dotimes [_ 50] (forms/->span core-parsed)))
+  (time (prof/profile (dotimes [_ 50] (forms/->span core-parsed))))
   (prof/generate-diffgraph 2 1 {})
   ;; this is a recursive fn, so the constant factors are probably worth
   ;; worrying about
@@ -99,23 +103,10 @@
   (prof/profile (dotimes [_ 5000] (forms/->span test-node)))
   (prof/generate-diffgraph 2 3 {})
   (prof/generate-diffgraph 1 3 {})
-  (prof/profile (dotimes [_ 5000]
-                  (forms/->node (node/coerce
-                                 '(1 2 [4 5 {:a :b :aa [sym sym-2]}])))))
-  (t/profile {}
-             (dotimes [_ 1000]
-               (t/p :apply-list (apply list (range 1 50000)))
-               (t/p :apply-list-mapv
-                    (apply list (mapv identity (range 1 50000))))
-               (t/p :seq (seq (range 1 50000)))
-               (t/p :doall (doall (range 1 50000)))))
-  (prof/profile (dotimes [_]))
-  (prof/stop)
   (prof/serve-ui 8085))
 
 
 (comment
-  (require '[clojure.walk :as walk])
   ;; this is the basic kind of operation that could allow for
   ;; a meaningful comparison of performance against the existing
   ;; implementation
@@ -156,9 +147,9 @@
      (t/p :->form (forms/->form example-node {:update-subnodes? true}))
      (t/p :->node (forms/->node example-node {:update-subnodes? true}))))
   (t/profile {}
-    (dotimes [i 500]
-      (t/p :->form (forms/->form core-parsed {:update-subnodes? true}))
-      (t/p :->node
+             (dotimes [i 500]
+               (t/p :->form (forms/->form core-parsed {:update-subnodes? true}))
+               (t/p :->node
                     (forms/->node core-parsed {:update-subnodes? true}))))
   (prof/profile (dotimes [_ 5000]
                   (forms/->form example-node {:update-subnodes? true})))
@@ -168,3 +159,92 @@
                   (forms/->form core-parsed {:update-subnodes? true})))
   (prof/profile (dotimes [_ 500]
                   (forms/->node core-parsed {:update-subnodes? true}))))
+
+
+(comment
+  (t/profile
+   {}
+   (dotimes [_ 50]
+     (t/p :parsed/walk
+          (walk/walk #(if (node/node? %) (forms/->span (forms/->form % {})) %)
+                     #(forms/->span (forms/->form % {}))
+                     core-parsed))
+     (t/p :parsed/walk-2
+          (walk/walk #(if (and (node/node? %) (not (node/inner? %)))
+                        (forms/token->span %)
+                        %)
+                     #(forms/coll->span %)
+                     (forms/->form core-parsed {})))
+     (t/p :parsed/span (forms/->span core-parsed))
+     (t/p :parsed/prewalk
+          (walk/prewalk
+           #(if (node/node? %) (forms/->span (forms/->form % {})) %)
+           (forms/->form core-parsed {})))
+     (t/p :parsed/prewalk-2
+          (walk/prewalk #(if (and (node/node? %) (not (node/inner? %)))
+                           (forms/token->span %)
+                           %)
+                        (forms/->form core-parsed {})))
+     (t/p :parsed/postwalk
+          (walk/postwalk #(let [node? (node/node? %)]
+                            (cond (not node?) %
+                                  (and node? (not (node/inner? %)))
+                                  (forms/token->span %)
+                                  (and node? (node/inner? %))
+                                  (forms/coll->span % {} (fn [i & args] i))
+                                  :default %))
+                         #_(forms/->form core-parsed {:update-subnodes? true})
+                         (forms/->form core-parsed {})))))
+  (walk/prewalk-demo example-node)
+  ;; naive postwalk blows up the heap - unclear why, but
+  ;; I think because already-converted hiccup elements
+  ;; may be getting coerced
+  (prof/profile
+      (dotimes [i 50]
+        (walk/postwalk
+         (fn conv-node [n]
+           (cond (and (node/node? n) (not (node/inner? n))) (forms/token->span n)
+                 (and (node/node? n) (node/inner? n))
+                 (forms/coll->span n {} (fn identity-inner [i & args] i))
+                 :default n))
+         (forms/->form core-parsed {:update-subnodes? true})
+         #_(forms/->form core-parsed {}))))
+  (prof/profile (dotimes [i 50]
+                  (forms/->span (forms/->form core-parsed
+                                              {:update-subnodes? true})
+                                #_(forms/->form core-parsed {}))))
+  ;; flamegraph replace for the walk-based implementation tested above:
+  ;; /(clojure\.walk/walk).+;(clojure\.core/partial/fn--5839)/ $1$2
+  ;; notes on performance from a transformed flamegraph:
+  ;; - about 33.33% of the inner loop is spent on forms/node-attributes
+  ;; - 7.48% on forms/literal-type
+  ;; - 5% on node-class
+  ;; this leaves a "fully optimized" perf budget of about 45.5%,
+  ;; which would save 40ms if replaced with code that magically did
+  ;; the same thing instantly.
+  (prof/generate-diffgraph 3 4 {})
+  ;; the inner loop here involves frequently calling
+  ;; `forms/node-attributes`, so measuring some examples is potentially
+  ;; worth it.
+  (let [plain-node    (node/coerce [:abc [:def]])
+        non-node-meta (node/coerce ^{:src :examples} [:abc [:def]])
+        node-meta     (node/coerce ^{:node/type :example-vector} [:abc [:def]])]
+    (t/profile
+        {}
+      (dotimes [_ 500000]
+        (t/p :node-attr/empty (forms/node-attributes plain-node))
+        (t/p :node-attr/non-node-meta (forms/node-attributes non-node-meta))
+        (t/p :node-attr/node-meta (forms/node-attributes node-meta))
+        (t/p :node-attr/literal-type (forms/literal-type plain-node)))))
+  ;; a trivial optimization that would yield significant benefits here
+  ;; would be streamlining the most common case: getting the literal type
+  ;; of a node without metadata. if I can make detection sufficiently fast
+  ;; it should be almost as fast as just calling `forms/literal-type`
+  ;; alone, which would be a ~6x speedup for the most common case. Even
+  ;; better would be figuring out how to avoid calling node-attributes
+  ;; altogether. the preconversion step may be one way, assuming I can
+  ;; maintain its speed. right now it is sufficiently fast that the
+  ;; benefits of pre- conversion outweigh the costs of walking the node
+  ;; tree twice. putting more work in the pre-conversion step may eliminate
+  ;; that benefit.
+)

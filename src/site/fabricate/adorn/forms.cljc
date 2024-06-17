@@ -194,6 +194,10 @@
         (string? value)    (p/parse-string-all value)
         :default           (node/coerce value)))
 
+;; TODO: detect if something is already a Hiccup node, maybe
+;; this would allow for already-converted elements to be child elements
+;; of ones yet to be converted without worrying about coercing a Hiccup
+;; element back into a node
 (defn ->form
   [value
    {:keys [lang update-subnodes?]
