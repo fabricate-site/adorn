@@ -200,15 +200,15 @@
   ;; I think because already-converted hiccup elements
   ;; may be getting coerced
   (prof/profile
-      (dotimes [i 50]
-        (walk/postwalk
-         (fn conv-node [n]
-           (cond (and (node/node? n) (not (node/inner? n))) (forms/token->span n)
-                 (and (node/node? n) (node/inner? n))
-                 (forms/coll->span n {} (fn identity-inner [i & args] i))
-                 :default n))
-         (forms/->form core-parsed {:update-subnodes? true})
-         #_(forms/->form core-parsed {}))))
+   (dotimes [i 50]
+     (walk/postwalk
+      (fn conv-node [n]
+        (cond (and (node/node? n) (not (node/inner? n))) (forms/token->span n)
+              (and (node/node? n) (node/inner? n))
+              (forms/coll->span n {} (fn identity-inner [i & args] i))
+              :default n))
+      (forms/->form core-parsed {:update-subnodes? true})
+      #_(forms/->form core-parsed {}))))
   (prof/profile (dotimes [i 50]
                   (forms/->span (forms/->form core-parsed
                                               {:update-subnodes? true})
@@ -230,12 +230,12 @@
         non-node-meta (node/coerce ^{:src :examples} [:abc [:def]])
         node-meta     (node/coerce ^{:node/type :example-vector} [:abc [:def]])]
     (t/profile
-        {}
-      (dotimes [_ 500000]
-        (t/p :node-attr/empty (forms/node-attributes plain-node))
-        (t/p :node-attr/non-node-meta (forms/node-attributes non-node-meta))
-        (t/p :node-attr/node-meta (forms/node-attributes node-meta))
-        (t/p :node-attr/literal-type (forms/literal-type plain-node)))))
+     {}
+     (dotimes [_ 500000]
+       (t/p :node-attr/empty (forms/node-attributes plain-node))
+       (t/p :node-attr/non-node-meta (forms/node-attributes non-node-meta))
+       (t/p :node-attr/node-meta (forms/node-attributes node-meta))
+       (t/p :node-attr/literal-type (forms/literal-type plain-node)))))
   ;; a trivial optimization that would yield significant benefits here
   ;; would be streamlining the most common case: getting the literal type
   ;; of a node without metadata. if I can make detection sufficiently fast
@@ -247,4 +247,40 @@
   ;; benefits of pre- conversion outweigh the costs of walking the node
   ;; tree twice. putting more work in the pre-conversion step may eliminate
   ;; that benefit.
+)
+
+
+(defn item-shape
+  [i]
+  (let [node? (node/node? i)]
+    (cond (not node?) i
+          (and node? (not (node/inner? i))) (node/tag i)
+          (and node? (node/inner? i)) (into [(node/tag i) :items]
+                                            (node/children i))
+          :default i)))
+
+(defn form-shape
+  [frm]
+  (let [frm-node (forms/->form frm {})]
+    (clojure.walk/postwalk item-shape frm-node)))
+
+(comment
+  (t/profile {}
+             (dotimes [_ 250]
+               (t/p :shape.postwalk/example (form-shape example-node))
+               (t/p :shape.postwalk/core (form-shape core-parsed))
+               (t/p :shape.prewalk/example
+                    (walk/prewalk item-shape (forms/->form example-node {})))
+               (t/p :shape.prewalk/core
+                    (walk/prewalk item-shape (forms/->form core-parsed {})))))
+  ;; initial profiling indicates that prewalk performs significantly better
+  ;; in this simplified example than postwalk. it is within striking
+  ;; distance of the original performance budget of 60FPS.
+  (/ 1000.0 14)
+  (prof/profile (dotimes [_ 100] (form-shape core-parsed)))
+  (prof/profile (dotimes [_ 100]
+                  (walk/prewalk item-shape (forms/->form core-parsed {}))))
+  (prof/generate-diffgraph 11 13 {})
+  ;; visual comparison of the flamegraphs indicates fewer recursive calls
+  ;; for prewalk.
 )
