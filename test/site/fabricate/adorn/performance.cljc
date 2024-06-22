@@ -181,10 +181,14 @@
            #(if (node/node? %) (forms/->span (forms/->form % {})) %)
            (forms/->form core-parsed {})))
      (t/p :parsed/prewalk-2
-          (walk/prewalk #(if (and (node/node? %) (not (node/inner? %)))
-                           (forms/token->span %)
-                           %)
-                        (forms/->form core-parsed {})))
+          (walk/prewalk #(let [node? (node/node? %)]
+                           (cond (not node?) %
+                                 (and node? (not (node/inner? %)))
+                                 (forms/token->span %)
+                                 (and node? (node/inner? %))
+                                 (forms/coll->span % {} (fn [i & args] i))
+                                 :default %))
+                        (forms/->form core-parsed {:update-subnodes? true})))
      (t/p :parsed/postwalk
           (walk/postwalk #(let [node? (node/node? %)]
                             (cond (not node?) %
@@ -194,7 +198,7 @@
                                   (forms/coll->span % {} (fn [i & args] i))
                                   :default %))
                          #_(forms/->form core-parsed {:update-subnodes? true})
-                         (forms/->form core-parsed {})))))
+                         (forms/->form core-parsed {:update-subnodes? true})))))
   (walk/prewalk-demo example-node)
   ;; naive postwalk blows up the heap - unclear why, but
   ;; I think because already-converted hiccup elements
@@ -264,6 +268,15 @@
   (let [frm-node (forms/->form frm {})]
     (clojure.walk/postwalk item-shape frm-node)))
 
+(defn convert-node
+  [i]
+  (let [node? (node/node? i)]
+    (cond (not node?) i
+          (and node? (not (node/inner? i))) (forms/token->span i)
+          (and node? (node/inner? i))
+          (forms/coll->span i {} (fn ident [si & args] si))
+          :default i)))
+
 (comment
   (t/profile {}
              (dotimes [_ 250]
@@ -283,4 +296,34 @@
   (prof/generate-diffgraph 11 13 {})
   ;; visual comparison of the flamegraphs indicates fewer recursive calls
   ;; for prewalk.
+  (with-redefs [forms/node-attributes (constantly {})]
+    (t/profile
+     {}
+     (dotimes [_ 125]
+       (t/p :convert.postwalk/example
+            (walk/postwalk convert-node (forms/->form example-node {})))
+       (t/p :convert.postwalk/core
+            (walk/postwalk convert-node (forms/->form core-parsed {})))
+       (t/p :convert.prewalk/example
+            (walk/prewalk convert-node (forms/->form example-node {})))
+       (t/p :convert.prewalk/core
+            (walk/prewalk convert-node (forms/->form core-parsed {})))
+       (t/p :convert.->span/core
+            (forms/->span (forms/->form core-parsed {}))))))
+  (prof/clear-results)
+  (with-redefs [forms/node-attributes (constantly {})]
+    (prof/profile (dotimes [_ 125]
+                    (t/p :convert.postwalk/core
+                         (walk/postwalk convert-node
+                                        (forms/->form core-parsed {}))))))
+  (with-redefs [forms/node-attributes (constantly {})]
+    (prof/profile (dotimes [_ 125]
+                    (t/p :convert.prewalk/core
+                         (walk/prewalk convert-node
+                                       (forms/->form core-parsed {}))))))
+  ;; I don't think I'm correctly rewriting the flamegraph here. Also, I
+  ;; worry that the rewriting hides the number of recursive calls,
+  ;; which is an important part of understanding performance
+  ;; I think just doing "collapse recursive" on the calls to clojure.walk
+  ;; may be more reliable than writing the transform manually.
 )
