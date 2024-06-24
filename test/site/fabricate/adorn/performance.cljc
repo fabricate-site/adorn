@@ -102,7 +102,7 @@
   (prof/profile (dotimes [_ 500] (forms/->node test-node)))
   (prof/profile (dotimes [_ 5000] (forms/->span test-node)))
   (prof/generate-diffgraph 2 3 {})
-  (prof/generate-diffgraph 1 3 {})
+  (prof/generate-diffgraph 1 2 {})
   (prof/serve-ui 8085))
 
 
@@ -296,7 +296,7 @@
   (prof/generate-diffgraph 11 13 {})
   ;; visual comparison of the flamegraphs indicates fewer recursive calls
   ;; for prewalk.
-  (with-redefs [forms/node-attributes (constantly {})]
+  (with-redefs [#_#_forms/node-attributes (constantly {})]
     (t/profile
      {}
      (dotimes [_ 125]
@@ -311,19 +311,54 @@
        (t/p :convert.->span/core
             (forms/->span (forms/->form core-parsed {}))))))
   (prof/clear-results)
-  (with-redefs [forms/node-attributes (constantly {})]
-    (prof/profile (dotimes [_ 125]
-                    (t/p :convert.postwalk/core
-                         (walk/postwalk convert-node
-                                        (forms/->form core-parsed {}))))))
-  (with-redefs [forms/node-attributes (constantly {})]
-    (prof/profile (dotimes [_ 125]
-                    (t/p :convert.prewalk/core
-                         (walk/prewalk convert-node
-                                       (forms/->form core-parsed {}))))))
+  (time (with-redefs [#_#_forms/node-attributes (constantly {})]
+          (prof/profile (dotimes [_ 125]
+                          (t/p :convert.postwalk/core
+                               (walk/postwalk convert-node
+                                              (forms/->form core-parsed
+                                                            {:update-subnodes?
+                                                             true})))))))
+  (time (with-redefs [#_#_forms/node-attributes (constantly {})]
+          (prof/profile (dotimes [_ 125]
+                          (t/p :convert.prewalk/core
+                               (walk/prewalk convert-node
+                                             (forms/->form core-parsed
+                                                           {:update-subnodes?
+                                                            true})))))))
+  (prof/profile (dotimes [_ 1250000]
+                  (t/p :forms/->form
+                       (forms/->form core-parsed {:update-subnodes? true}))))
   ;; I don't think I'm correctly rewriting the flamegraph here. Also, I
   ;; worry that the rewriting hides the number of recursive calls,
   ;; which is an important part of understanding performance
   ;; I think just doing "collapse recursive" on the calls to clojure.walk
   ;; may be more reliable than writing the transform manually.
 )
+
+(defn get-attributes
+  [v]
+  (let [node? (node/node? v)] (if node? (do (forms/node-attributes v) v) v)))
+
+(comment
+  ;; merge is slow, apparently compare with large sample size:
+  (t/profile {}
+             (dotimes [_ 20000000]
+               (t/p :merge (merge {:a 1} nil {:b 1}))
+               (t/p :into-kv (into {} [[:a 1] nil [:b 1]]))))
+  (t/profile {}
+             (dotimes [_ 125]
+               (t/p :attr/prewalk (walk/prewalk get-attributes core-parsed))
+               (t/p :attr/postwalk (walk/postwalk get-attributes core-parsed))
+               ;; level setting
+               (t/p :identity/prewalk (walk/prewalk identity core-parsed))
+               (t/p :identity/postwalk (walk/prewalk identity core-parsed))))
+  (prof/profile (dotimes [_ 125] (walk/prewalk get-attributes core-parsed)))
+  (prof/profile (dotimes [_ 125] (walk/postwalk get-attributes core-parsed)))
+  (let [m! (transient {})]
+    (into m! [[:a 1 :b 2]])
+    (persistent! m!))
+  (t/profile {}
+             (dotimes [_ 1000000]
+               (t/p :literal (do "s"))
+               (t/p :str-fn (do (str "s" nil)))
+               (t/p :str-join (do (str "s" (clojure.string/join " " [])))))))

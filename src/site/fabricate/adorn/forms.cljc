@@ -297,6 +297,16 @@
    :forms        "forms"
    :reader-macro "reader-cond"})
 
+(comment
+  (node-type (node/coerce \a))
+  (node-attributes (node/coerce \a))
+  (node-attributes (node/coerce true)))
+
+(def html-class-defaults
+  (reduce-kv (fn [m k v] (assoc m k (str "language-clojure " v)))
+             {}
+             node-html-classes))
+
 
 ;; here's one way that you might highlight special keywords or symbols:
 ;; HTML data attributes. obviously only a few types can be set as
@@ -380,6 +390,16 @@
    :object     {:clj 'java.lang.Object :cljs 'js/Object}
    :list       {:clj 'clojure.lang.PersistentList :cljs 'cljs.core/List}})
 
+(def platform-class-strs
+  (reduce-kv (fn [m c-type lookup]
+               (assoc m
+                      c-type
+                      (reduce-kv (fn [lm c-dialect cname]
+                                   (assoc lm c-dialect (str cname)))
+                                 {}
+                                 lookup)))
+             {}
+             platform-classes))
 
   ;; TODO: make this static with dynamic fallback
 (defn node-class
@@ -387,41 +407,71 @@
     :or   {lang #?(:clj :clj
                    :cljs :cljs)}
     :as   node}]
-  (let [nt (node-type node)] (get-in platform-classes [nt lang])))
-
-  ;; if the nodes are supposed to be optionally enriched with platform-specific
-  ;; information, then HTML data attributes are a good way to do that.
-  ;; (still annotate literal keywords, symbols, and vars with the values,
-  ;; though)
+  (let [nt (node-type node)] (get-in platform-class-strs [nt lang])))
 
 
-  ;; I think there should be a way to either augment or replace the default
-  ;; classes
-  ;; :classes key - augment defaults
-  ;; :class-name key - override defaults (including language-clojure)
+
+(comment
+  (node-class (second (node/children (p/parse-string-all "'abc 'def"))))
+  (node-class (second (node/children (p/parse-string-all "'abc
+'def"))))
+  (node-class (second (node/children (p/parse-string-all "'abc 'def"))))
+  (literal-type (node/coerce "abc"))
+  (literal-type (node/coerce ["abc"]))
+  (class (node/sexpr (node/coerce "abc")))
+  (class (node/sexpr (node/coerce "abc"))))
+
+;; if the nodes are supposed to be optionally enriched with platform-specific
+;; information, then HTML data attributes are a good way to do that.
+;; (still annotate literal keywords, symbols, and vars with the values,
+;; though)
+
+
+
+;; I think there should be a way to either augment or replace the default
+;; classes
+;; :classes key - augment defaults
+;; :class-name key - override defaults (including language-clojure)
 (defn node-attributes
   "Get the HTML element attributes for the given form.
 
-                              Allows passing through arbitrary attributes (apart from the :class attr)."
+  Allows passing through arbitrary attributes (apart from the :class attr)."
   ([{:keys [lang]
      :or   {lang #?(:clj :clj
                     :cljs :cljs)}
      :as   node} {:keys [class-name classes] :as attrs}]
-   (let [;lang (or lang (:lang attrs))
-         nt (node-type node)
+   (let [nt (node-type node)
          nc (node-class node)
-         node-class-name (node-html-classes nt)]
-     (merge {:class (or class-name
-                        (str "language-clojure"
-                             " "
-                             node-class-name
-                             (when classes (str " " (str/join " " classes)))))}
-            (when (and (not= :whitespace nt) nc)
-              {(lang {:clj :data-java-class :cljs :data-js-class}) (str nc)})
-            (when (= :symbol nt) {:data-clojure-symbol (str node)})
-            (when (= :keyword nt) {:data-clojure-keyword (str node)})
-            (when (= :var nt) {:data-clojure-var (str node)})
-            (dissoc attrs :class-name :class :classes :lang))))
+         node-class-name (html-class-defaults nt "unknown")
+         r! (transient attrs)]
+     (-> r!
+         (dissoc! :class-name :class :classes :lang)
+         (assoc! :class
+                 (or class-name
+                     (if-not classes
+                       node-class-name
+                       (str node-class-name " " (str/join " " classes)))))
+         (#(if (and (not= :whitespace nt) nc)
+             (assoc! % (lang {:clj :data-java-class :cljs :data-js-class}) nc)
+             %))
+         (#(case nt
+             :symbol  (assoc! % :data-clojure-symbol (str node))
+             :keyword (assoc! % :data-clojure-keyword (str node))
+             :var     (assoc! % :data-clojure-var (str node))
+             %))
+         persistent!)
+     #_(merge {:class (or class-name
+                          (str "language-clojure"
+                               " "
+                               node-class-name
+                               (when classes
+                                 (str " " (str/join " " classes)))))}
+              (when (and (not= :whitespace nt) nc)
+                {(lang {:clj :data-java-class :cljs :data-js-class}) (str nc)})
+              (when (= :symbol nt) {:data-clojure-symbol (str node)})
+              (when (= :keyword nt) {:data-clojure-keyword (str node)})
+              (when (= :var nt) {:data-clojure-var (str node)})
+              (dissoc attrs :class-name :class :classes :lang))))
   ([node] (node-attributes node {})))
 
 (declare ->span)
