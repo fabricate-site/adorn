@@ -371,11 +371,12 @@
         (char? (:value node)) :character
         :default :object))
 
-(defn node-type
+(defn node-clojure-type
   [node]
   (let [t (tag node)]
     (cond (= :token t) (literal-type node)
           :default     t)))
+
 
 (def platform-classes
   "Classes for each platform"
@@ -401,21 +402,39 @@
              {}
              platform-classes))
 
-  ;; TODO: make this static with dynamic fallback
-(defn node-class
+(defn get-class
+  [{:keys [lang] :as node}]
+  (let [platform-lang #?(:clj :clj
+                         :cljs :cljs)]
+    (when (and (or (= lang platform-lang) (nil? lang))
+               (node/sexpr-able? node)
+               (= :token (node/tag node)))
+      (let [node-value (node/sexpr node)
+            c (class node-value)]
+        (when c
+          #?(:clj (.getName c)
+             :cljs (str c)))))))
+
+;; TODO: make this static with dynamic fallback
+(defn node-platform-class
   [{:keys [lang]
     :or   {lang #?(:clj :clj
                    :cljs :cljs)}
     :as   node}]
-  (let [nt (node-type node)] (get-in platform-class-strs [nt lang])))
+  (let [nt (node-clojure-type node)]
+    (or (get-in platform-class-strs [nt lang]) (get-class node))))
 
 
 
 (comment
-  (node-class (second (node/children (p/parse-string-all "'abc 'def"))))
-  (node-class (second (node/children (p/parse-string-all "'abc
+  (node/value "abc")
+  (node-platform-class (second (node/children (p/parse-string-all
+                                               "'abc 'def"))))
+  (node-platform-class (second (node/children (p/parse-string-all
+                                               "'abc
 'def"))))
-  (node-class (second (node/children (p/parse-string-all "'abc 'def"))))
+  (node-platform-class (second (node/children (p/parse-string-all
+                                               "'abc 'def"))))
   (literal-type (node/coerce "abc"))
   (literal-type (node/coerce ["abc"]))
   (class (node/sexpr (node/coerce "abc")))
@@ -432,6 +451,16 @@
 ;; classes
 ;; :classes key - augment defaults
 ;; :class-name key - override defaults (including language-clojure)
+
+;; data model for node-attributes
+;; the *clojure type* of a node/form is mapped to the HTML `class` attribute
+;; the *platform type* of a node/form is mapped to the HTML `data-java-class`
+;; or `data-js-class` attribute, respectively.
+;; the platform type can be derived from the clojure type or detected directly
+;; via introspection.
+
+;; I hope this makes things less ambiguous.
+
 (defn node-attributes
   "Get the HTML element attributes for the given form.
 
@@ -440,17 +469,19 @@
      :or   {lang #?(:clj :clj
                     :cljs :cljs)}
      :as   node} {:keys [class-name classes] :as attrs}]
-   (let [nt (node-type node)
-         nc (node-class node)
-         node-class-name (html-class-defaults nt "unknown")
+   (let [nt (node-clojure-type node)
+         nc (node-platform-class node)
+         node-platform-class-name
+         (html-class-defaults nt (or (not-empty (str (name nt))) "unknown"))
          r! (transient attrs)]
      (-> r!
          (dissoc! :class-name :class :classes :lang)
-         (assoc! :class
-                 (or class-name
-                     (if-not classes
-                       node-class-name
-                       (str node-class-name " " (str/join " " classes)))))
+         (assoc!
+          :class
+          (or class-name
+              (if-not classes
+                node-platform-class-name
+                (str node-platform-class-name " " (str/join " " classes)))))
          (#(if (and (not= :whitespace nt) nc)
              (assoc! % (lang {:clj :data-java-class :cljs :data-js-class}) nc)
              %))
@@ -463,7 +494,7 @@
      #_(merge {:class (or class-name
                           (str "language-clojure"
                                " "
-                               node-class-name
+                               node-platform-class-name
                                (when classes
                                  (str " " (str/join " " classes)))))}
               (when (and (not= :whitespace nt) nc)
@@ -576,7 +607,7 @@
 
 (defn coll->span
   ([node attrs subform-fn]
-   (let [nt          (node-type node)
+   (let [nt          (node-clojure-type node)
          [start end] (get coll-delimiters nt)
          span-attrs  (node-attributes node attrs)]
      (conj (into [:span span-attrs start]

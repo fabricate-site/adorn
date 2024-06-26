@@ -10,6 +10,12 @@
 
 
 (t/deftest node-data
+  (t/testing "node properties"
+    (t/is (= "java.lang.Character"
+             (forms/node-platform-class (assoc (node/coerce \a) :lang :clj))))
+    (t/is (= "java.lang.Boolean"
+             (forms/node-platform-class (assoc (node/coerce true) :lang :clj))))
+    (t/is (= "character" (:class (forms/node-attributes (node/coerce \a))))))
   (t/testing "node data lifting"
     (let [node-1       (node/coerce
                         ^{:type :something :node/type :something-else} {:a 1})
@@ -257,17 +263,18 @@
     ;; https://clojure.org/reference/special_forms
     ;; but close
     #_(t/is (= :defn
-               (forms/node-type (p/parse-string "(defn ddec [x] (- x 2))")))
-            "defn should be detected by node-type")
+               (forms/node-clojure-type (p/parse-string
+                                         "(defn ddec [x] (- x 2))")))
+            "defn should be detected by node-clojure-type")
     #_(t/is (= :ns
-               (forms/node-type
+               (forms/node-clojure-type
                 (p/parse-string
                  "(ns my.custom.ns (:require '[clojure.string :as str]))"))
-               "ns should be detected by node-type"))
+               "ns should be detected by node-clojure-type"))
     #_(t/is (= :let
-               (forms/node-type (p/parse-string
-                                 "(let [bind-sym :abc] (symbol bind-sym))")))
-            "let should be detected by node-type")))
+               (forms/node-clojure-type
+                (p/parse-string "(let [bind-sym :abc] (symbol bind-sym))")))
+            "let should be detected by node-clojure-type")))
 
 (defn parse-file
   [f]
@@ -283,12 +290,30 @@
         f)
     f))
 
+(defn check-hiccup
+  [f]
+  (if (and (vector? f) (keyword? (first f)))
+    (let [attrs? (second f)]
+      (if (map? attrs?)
+        (do (when (contains? attrs? :class)
+              (let [c   (:class attrs?)
+                    uk? (re-find #"unknown" c)]
+                (when uk? (println f))
+                (t/is (not uk?) "all forms in source code should be parsed")))
+            f)
+        f))
+    f))
+
+(forms/->span (parse-file "src/site/fabricate/adorn/forms.cljc"))
+
 (t/deftest multiforms
   (let [forms-parsed (parse-file "src/site/fabricate/adorn/forms.cljc")
         test-parsed  (parse-file "test/site/fabricate/adorn/forms_test.cljc")
         defaults     (atom [])]
     (t/testing "src files"
-      (clojure.walk/postwalk check-class (forms/->span forms-parsed)))
+      (clojure.walk/postwalk #_check-class
+                             check-hiccup
+                             (forms/->span forms-parsed)))
     (t/testing "test files"
       (clojure.walk/postwalk check-class (forms/->span test-parsed)))
     #_(doseq [form (:children forms-parsed)]
