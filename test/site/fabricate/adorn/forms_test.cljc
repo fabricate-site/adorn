@@ -3,6 +3,7 @@
             [rewrite-clj.node :as node]
             [rewrite-clj.parser :as p]
             [clojure.string :as string]
+            [clojure.walk :as walk]
             #?(:cljs [cljs.reader :as reader])
             #?(:cljs ["fs" :as fs])
             #?(:clj [clojure.test :as t]
@@ -58,11 +59,11 @@
                 "reserved rewrite-clj tags should be ignored"))))
     (t/is (= :custom
              (:display-type (forms/->node (with-meta (p/parse-string-all ":abc")
-                                            {:node/display-type :custom
-                                             :node/attr :val})))))
+                                                     {:node/display-type :custom
+                                                      :node/attr :val})))))
     (t/is (contains? (forms/->node (with-meta (p/parse-string-all ":abc")
-                                     {:node/display-type :custom
-                                      :node/attr         :val}))
+                                              {:node/display-type :custom
+                                               :node/attr         :val}))
                      :display-type))
     (t/is (= :clj (:lang (forms/->node :abc {:lang :clj}))))
     ;; *should* these be coerced into non-metadata nodes?
@@ -258,6 +259,29 @@
                                           {}
                                           (constantly :placeholder)))))
           "function overrides should work for child nodes"))
+  (t/testing "conversion equivalence"
+    (let [example-node (node/coerce
+                        [:abc [1 2 3 [4 5] :d :e [:f :g [:h [:i [:j [:k]]]]]]
+                         ;;'(defn myfunc [a] a)
+                         #'str])]
+      (t/is (= [:span
+                {:class "language-clojure var"
+                 :data-java-class "clojure.lang.Var"
+                 :data-clojure-var "#'clojure.core/str"}
+                [:span {:class "language-clojure dispatch"} "#"] "'"
+                [:span {:class "language-clojure var-ns"} "clojure.core"] "/"
+                [:span {:class "language-clojure var-name"} "str"]]
+               (forms/->span (forms/->form (node/coerce #'str) {:lang :clj}))
+               (walk/prewalk forms/convert-node
+                             (forms/->form (node/coerce #'str) {:lang :clj}))
+               (walk/postwalk forms/convert-node
+                              (forms/->form (node/coerce #'str) {:lang :clj}))))
+      (t/is (= (forms/->span (forms/->form example-node {:lang :clj}) {})
+               (walk/prewalk forms/convert-node
+                             (forms/->form example-node {:lang :clj}))
+               (walk/postwalk forms/convert-node
+                              (forms/->form example-node {:lang :clj})))
+            "conversion of composite forms should be equivalent")))
   (t/testing "special forms"
     ;; not quite in the sense that Clojure uses the term
     ;; https://clojure.org/reference/special_forms
@@ -319,3 +343,10 @@
     #_(doseq [form (:children forms-parsed)]
         (try (forms/->span form)
              (catch Exception e #_(tap> form) (println form))))))
+
+
+(comment
+  (node/inner? (node/coerce #'str))
+  (node/children (node/coerce #'str))
+  ((complement #{:var :span}) :var)
+  ((complement #{:var :span}) :var))

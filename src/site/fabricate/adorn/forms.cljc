@@ -298,7 +298,6 @@
    :reader-macro "reader-cond"})
 
 (comment
-  (node-type (node/coerce \a))
   (node-attributes (node/coerce \a))
   (node-attributes (node/coerce true)))
 
@@ -513,9 +512,8 @@
   ([node attrs]
    (let [t (literal-type node)]
      (let [h [:span (node-attributes node attrs)]]
-       (if (= :string t)
-         (apply conj h (interpose [:br] (:lines node)))
-         (conj h (str node))))))
+       (cond (= :string t) (apply conj h (interpose [:br] (:lines node)))
+             :default      (conj h (str node))))))
   ([node] (token->span node {})))
 
 
@@ -584,19 +582,40 @@
 
 
 (defn var->span
-  ([node attrs]
-   (let [var-sym-node (first (node/children node))
-         var-sym      (:value var-sym-node)
-         var-ns       (namespace var-sym)
-         var-name     (name var-sym)
-         span-attrs   (node-attributes node attrs)]
-     (if var-ns
-       [:span span-attrs (:dispatch tokens) "'"
-        [:span {:class "language-clojure var-ns"} var-ns] "/"
-        [:span {:class "language-clojure var-name"} var-name]]
-       [:span span-attrs (:dispatch tokens) "'" (str var-sym-node)])))
-  ([node] (var->span node {})))
+  ([node? attrs]
+   (let [var-sym-node (first (node/children node?))]
+     (if-not (and (vector? var-sym-node)
+                  (or (= :span (first var-sym-node))
+                      (contains? (second var-sym-node) :data-clojure-symbol)))
+       (let [var-sym    (:value var-sym-node)
+             var-ns     (namespace var-sym)
+             var-name   (name var-sym)
+             span-attrs (node-attributes node? attrs)]
+         (if var-ns
+           [:span span-attrs (:dispatch tokens) "'"
+            [:span {:class "language-clojure var-ns"} var-ns] "/"
+            [:span {:class "language-clojure var-name"} var-name]]
+           [:span span-attrs (:dispatch tokens) "'" (str var-sym-node)]))
+       ;; if already converted, use the data from the converted node
+       (let [{v-node :node attrs :attrs} (sym-span->var-node-args var-sym-node)]
+         (var->span v-node attrs)))))
+  ([node?] (var->span node? {})))
 
+(defn- sym-span->var-node-args
+  ([sym-span lang]
+   (let [[_tag attrs & contents] sym-span]
+     {:node  (node/var-node (node/token-node (symbol (:data-clojure-symbol
+                                                      attrs))))
+      :attrs (-> attrs
+                 (dissoc :class
+                         :data-java-class
+                         :data-js-class
+                         :data-clojure-symbol)
+                 (assoc :lang lang))}))
+  ([sym-span]
+   (sym-span->var-node-args sym-span
+                            #?(:clj :clj
+                               :cljs :cljs))))
 
 (def coll-delimiters
   {:list   [(:paren/open tokens) (:paren/close tokens)]
@@ -749,6 +768,27 @@
        [:span (node-attributes node {:classes ["unknown"]}) (str node)])))
   ([n attrs] (->span n attrs ->span))
   ([n] (->span n {})))
+
+;; a new problem identified by this implementation:
+;; postwalk has the best performance, but rewrite-clj
+;; treats var nodes as having symbol nodes as child nodes,
+;; so a depth first conversion will result in a var node with a
+;; symbol node as a child node.
+
+;; this may not be a problem if I redefine the expected result of the
+;; Hiccup conversion to be a nested span for vars; probably easier than
+;; any of the alternatives
+
+(defn convert-node
+  [i]
+  (let [node? (node/node? i)]
+    (cond (not node?) i
+          (and node? (not (node/inner? i))) (token->span i)
+          (and node? (node/inner? i) ((complement #{:var}) (node/tag i)))
+          #_(forms/coll->span i {} (fn ident [si & args] si))
+          (->span i {} (fn ident [si & args] si))
+          (#{:var} (node/tag i)) (->span i)
+          :default i)))
 
 
 ;; how to specify higher-level forms
