@@ -58,6 +58,7 @@ npx shadow-cljs compile test
 
 # Acknowledgements
 
-- Thanks to Michiel Borkent (@borkdude) for the initial idea and excellent writeup
-- Thanks to Lee Read (@lread), Michiel Borkent and the other contributors to `rewrite-clj` for such an excellent library, and for answering my questions about it - this library wouldn't be possible without the well-designed machinery that `rewrite-clj` provides.
+- Thanks to (Michiel Borkent)[https://github.com/borkdude] for the initial idea and excellent writeup
+- Thanks to (Lee Read)[https://github.com/lread], Michiel Borkent and the other contributors to `rewrite-clj` for such an excellent library, and for answering my questions about it - this library wouldn't be possible without the well-designed machinery that `rewrite-clj` provides.
 - Thanks to John Newman for answering my novice questions about CLJS.
+- [Oleksandr Yakushev](https://github.com/alexander-yakushev) has written a plethora of invaluable tools and information that helped me measure the performance of this code in a rigorous way.
