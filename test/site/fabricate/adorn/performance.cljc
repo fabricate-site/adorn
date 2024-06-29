@@ -7,7 +7,7 @@
             [taoensso.tufte :as t]
             #?@(:cljs [#_[shadow.cljs.modern :refer [js-await]] ["fs" :as fs]]
                 :clj [[clj-async-profiler.core :as prof]
-                      [clojure.java.shell :as sh] [babashka.fs :as fs]])))
+                      [clojure.java.shell :as sh]])))
 
 (def clj-core-url
   "https://raw.githubusercontent.com/clojure/clojure/clojure-1.11.3/src/clj/clojure/core.clj")
@@ -69,29 +69,29 @@
           (t/p :multimethod/core-parse+adorn (adorn/clj->hiccup clj-core))
           (t/p :multimethod/parsed+adorn (adorn/clj->hiccup core-parsed))
           (t/p :multimethod/converted+adorn (adorn/clj->hiccup core-converted))
-         (t/p :multimethod/sexprs+adorn (adorn/clj->hiccup core-sexprs))
-         (t/p :fn/core-parse+adorn
-              (-> clj-core
-                  parser/parse-string-all
-                  forms/->span))
-         (t/p :fn/parsed+adorn (forms/->span core-parsed))
-         (t/p :fn/sexprs+adorn (forms/->span core-sexprs))
-         (t/p :fn/converted+adorn (forms/->span core-converted))
-         (t/p :sexpr/print (with-out-str (print core-sexprs)))))
+          (t/p :multimethod/sexprs+adorn (adorn/clj->hiccup core-sexprs))
+          (t/p :fn/core-parse+adorn
+               (-> clj-core
+                   parser/parse-string-all
+                   forms/->span))
+          (t/p :fn/parsed+adorn (forms/->span core-parsed))
+          (t/p :fn/sexprs+adorn (forms/->span core-sexprs))
+          (t/p :fn/converted+adorn (forms/->span core-converted))
+          (t/p :sexpr/print (with-out-str (print core-sexprs)))))
       (t/profile {}
-                 (dotimes [_ #?(:clj 15
-                                :cljs 15)]
-                   ;; re-memoize ->span each iteration to make sure each
-                   ;; test is under identical conditions
-                   (with-redefs [forms/->span (memoize forms/->span)]
-                     (t/p :memoized/core-parse+adorn
-                          (-> clj-core
-                              parser/parse-string-all
-                              forms/->span))
-                     (t/p :memoized/parsed+adorn (forms/->span core-parsed))
-                     (t/p :memoized/converted+adorn
-                          (forms/->span core-converted))
-                     (t/p :memoized/sexprs+adorn (forms/->span core-sexprs))))))
+        (dotimes [_ #?(:clj 15
+                       :cljs 15)]
+          ;; re-memoize ->span each iteration to make sure each
+          ;; test is under identical conditions
+          (with-redefs [forms/->span (memoize forms/->span)]
+            (t/p :memoized/core-parse+adorn
+                 (-> clj-core
+                     parser/parse-string-all
+                     forms/->span))
+            (t/p :memoized/parsed+adorn (forms/->span core-parsed))
+            (t/p :memoized/converted+adorn
+                 (forms/->span core-converted))
+            (t/p :memoized/sexprs+adorn (forms/->span core-sexprs))))))
     (let [out-file-name (-> (sh/sh "git" "rev-parse" "--short" "HEAD")
                             :out
                             clojure.string/trim

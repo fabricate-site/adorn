@@ -1,0 +1,29 @@
+pId                               nCalls        Min      50% ≤      90% ≤      95% ≤      99% ≤        Max       Mean   MAD      Clock  Total
+
+:multimethod/core-parse+adorn         25      189ms      193ms      194ms      197ms      223ms      223ms      194ms   ±1%      4.83s    17%
+:fn/core-parse+adorn                  25      184ms      186ms      191ms      192ms      194ms      194ms      187ms   ±1%      4.69s    16%
+:multimethod/converted+adorn          25      114ms      117ms      122ms      123ms      134ms      134ms      118ms   ±2%      2.94s    10%
+:multimethod/parsed+adorn             25      113ms      116ms      123ms      123ms      136ms      136ms      117ms   ±2%      2.91s    10%
+:multimethod/sexprs+adorn             25      114ms      116ms      119ms      120ms      121ms      121ms      116ms   ±1%      2.89s    10%
+:fn/sexprs+adorn                      25      111ms      113ms      116ms      117ms      121ms      121ms      114ms   ±1%      2.83s    10%
+:fn/converted+adorn                   25      109ms      111ms      117ms      117ms      124ms      124ms      112ms   ±2%      2.79s    10%
+:fn/parsed+adorn                      25      109ms      111ms      113ms      118ms      126ms      126ms      111ms   ±2%      2.79s    10%
+:core-parse                           25       63ms       64ms       65ms       65ms       75ms       75ms       65ms   ±1%      1.62s     6%
+:convert/sexpr                        25       26ms       26ms       27ms       32ms       52ms       52ms       27ms   ±9%      682ms     2%
+:sexpr/print                          25        5ms        5ms        6ms        6ms        8ms        8ms        5ms   ±4%      137ms     0%
+:convert/parsed                       25        5μs        9μs       14μs       15μs      309μs      309μs       22μs ±106%      545μs     0%
+
+Accounted                                                                                                                       29.16s   100%
+Clock                                                                                                                           29.16s   100%
+
+
+pId                            nCalls        Min      50% ≤      90% ≤      95% ≤      99% ≤        Max       Mean   MAD      Clock  Total
+
+:memoized/core-parse+adorn         15      136ms      141ms      144ms      144ms      144ms      144ms      141ms   ±2%      2.10s    58%
+:memoized/sexprs+adorn             15       63ms       68ms       71ms       71ms       73ms       73ms       67ms   ±3%      1.01s    28%
+:memoized/parsed+adorn             15       14ms       18ms       21ms       21ms       26ms       26ms       18ms  ±11%      276ms     8%
+:memoized/converted+adorn          15       11ms       13ms       17ms       17ms       18ms       18ms       14ms  ±15%      208ms     6%
+
+Accounted                                                                                                                     3.60s   100%
+Clock                                                                                                                         3.60s   100%
+
