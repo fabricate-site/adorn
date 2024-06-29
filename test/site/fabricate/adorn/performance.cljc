@@ -60,44 +60,46 @@
               record?)
     (do
       (t/profile
-          {}
-        (dotimes [_ #?(:clj 25
-                       :cljs 15)]
-          (t/p :core-parse (parser/parse-string-all clj-core))
-          (t/p :convert/parsed (forms/->node core-parsed))
-          (t/p :convert/sexpr (forms/->node core-sexprs))
-          (t/p :multimethod/core-parse+adorn (adorn/clj->hiccup clj-core))
-          (t/p :multimethod/parsed+adorn (adorn/clj->hiccup core-parsed))
-          (t/p :multimethod/converted+adorn (adorn/clj->hiccup core-converted))
-          (t/p :multimethod/sexprs+adorn (adorn/clj->hiccup core-sexprs))
-          (t/p :fn/core-parse+adorn
-               (-> clj-core
-                   parser/parse-string-all
-                   forms/->span))
-          (t/p :fn/parsed+adorn (forms/->span core-parsed))
-          (t/p :fn/sexprs+adorn (forms/->span core-sexprs))
-          (t/p :fn/converted+adorn (forms/->span core-converted))
-          (t/p :sexpr/print (with-out-str (print core-sexprs)))))
+       {}
+       (dotimes [_ #?(:clj 25
+                      :cljs 15)]
+         (t/p :core-parse (parser/parse-string-all clj-core))
+         (t/p :convert/parsed (forms/->node core-parsed))
+         (t/p :convert/sexpr (forms/->node core-sexprs))
+         (t/p :multimethod/core-parse+adorn (adorn/clj->hiccup clj-core))
+         (t/p :multimethod/parsed+adorn (adorn/clj->hiccup core-parsed))
+         (t/p :multimethod/converted+adorn (adorn/clj->hiccup core-converted))
+         (t/p :multimethod/sexprs+adorn (adorn/clj->hiccup core-sexprs))
+         (t/p :fn/core-parse+adorn
+              (-> clj-core
+                  parser/parse-string-all
+                  forms/->span))
+         (t/p :fn/parsed+adorn (forms/->span core-parsed))
+         (t/p :fn/sexprs+adorn (forms/->span core-sexprs))
+         (t/p :fn/converted+adorn (forms/->span core-converted))
+         (t/p :sexpr/print (with-out-str (print core-sexprs)))))
       (t/profile {}
-        (dotimes [_ #?(:clj 15
-                       :cljs 15)]
-          ;; re-memoize ->span each iteration to make sure each
-          ;; test is under identical conditions
-          (with-redefs [forms/->span (memoize forms/->span)]
-            (t/p :memoized/core-parse+adorn
-                 (-> clj-core
-                     parser/parse-string-all
-                     forms/->span))
-            (t/p :memoized/parsed+adorn (forms/->span core-parsed))
-            (t/p :memoized/converted+adorn
-                 (forms/->span core-converted))
-            (t/p :memoized/sexprs+adorn (forms/->span core-sexprs))))))
-    (let [out-file-name (-> (sh/sh "git" "rev-parse" "--short" "HEAD")
-                            :out
-                            clojure.string/trim
-                            (#(format "test-resources/benchmarks/%s.txt" %)))
-          r (with-out-str (run-test! {:record? false}))]
-      (spit out-file-name r))))
+                 (dotimes [_ #?(:clj 15
+                                :cljs 15)]
+                   ;; re-memoize ->span each iteration to make sure each
+                   ;; test is under identical conditions
+                   (with-redefs [forms/->span (memoize forms/->span)]
+                     (t/p :memoized/core-parse+adorn
+                          (-> clj-core
+                              parser/parse-string-all
+                              forms/->span))
+                     (t/p :memoized/parsed+adorn (forms/->span core-parsed))
+                     (t/p :memoized/converted+adorn
+                          (forms/->span core-converted))
+                     (t/p :memoized/sexprs+adorn (forms/->span core-sexprs))))))
+    #?(:cljs nil
+       :clj (let [out-file-name (-> (sh/sh "git" "rev-parse" "--short" "HEAD")
+                                    :out
+                                    clojure.string/trim
+                                    (#(format "test-resources/benchmarks/%s.txt"
+                                              %)))
+                  r (with-out-str (run-test! {:record? false}))]
+              (spit out-file-name r)))))
 
 
 (comment
@@ -117,12 +119,12 @@
                   (forms/->node (node/coerce
                                  '(1 2 [4 5 {:a :b :aa [sym sym-2]}])))))
   (t/profile {}
-    (dotimes [_ 1000]
-      (t/p :apply-list (apply list (range 1 50000)))
-      (t/p :apply-list-mapv
-           (apply list (mapv identity (range 1 50000))))
-      (t/p :seq (seq (range 1 50000)))
-      (t/p :doall (doall (range 1 50000)))))
+             (dotimes [_ 1000]
+               (t/p :apply-list (apply list (range 1 50000)))
+               (t/p :apply-list-mapv
+                    (apply list (mapv identity (range 1 50000))))
+               (t/p :seq (seq (range 1 50000)))
+               (t/p :doall (doall (range 1 50000)))))
   (prof/profile (dotimes [_]))
   (prof/stop)
   (prof/serve-ui 8085))

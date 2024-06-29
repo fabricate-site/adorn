@@ -352,7 +352,8 @@
                (node/sexpr-able? node)
                (= :token (node/tag node)))
       (let [node-value (node/sexpr node)
-            c (class node-value)]
+            c #?(:clj (class node-value)
+                 :cljs (type node-value))]
         (when c
           #?(:clj (.getName c)
              :cljs (str c)))))))
@@ -512,7 +513,7 @@
 
 (defn coll->span
   ([node attrs subform-fn]
-   (let [nt          (node-type node)
+   (let [nt          (node-clojure-type node)
          [start end] (get coll-delimiters nt)
          span-attrs  (node-attributes node attrs)]
      (conj (into [:span span-attrs start]

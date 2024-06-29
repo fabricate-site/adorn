@@ -19,12 +19,12 @@
                                (get (meta node) :display-type)
                                (get node :type)
                                (get (meta node) :type)
-                               (forms/node-type node))
+                               (forms/node-clojure-type node))
          self-display-type (or (when (map? display-type) (:self* display-type))
                                display-type)]
      (cond (keyword? self-display-type) self-display-type
            (ifn? self-display-type) :display/fn
-           :default (forms/node-type node))))
+           :default (forms/node-clojure-type node))))
   ([node] (form-type node {})))
 
 
