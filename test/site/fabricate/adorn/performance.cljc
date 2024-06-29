@@ -273,11 +273,14 @@
   (let [node? (node/node? i)]
     (cond (not node?) i
           (and node? (not (node/inner? i))) (forms/token->span i)
-          (and node? (node/inner? i))
-          (forms/coll->span i {} (fn ident [si & args] si))
+          (and node? (node/inner? i) ((complement #{:var}) (node/tag i)))
+          #_(forms/coll->span i {} (fn ident [si & args] si))
+          (forms/->span i {} (fn ident [si & args] si))
           :default i)))
 
 (comment
+  (= (walk/prewalk convert-node (forms/->form core-parsed {}))
+     (walk/postwalk convert-node (forms/->form core-parsed {})))
   (t/profile {}
              (dotimes [_ 250]
                (t/p :shape.postwalk/example (form-shape example-node))
@@ -298,33 +301,36 @@
   ;; for prewalk.
   (with-redefs [#_#_forms/node-attributes (constantly {})]
     (t/profile
-     {}
-     (dotimes [_ 125]
-       (t/p :convert.postwalk/example
-            (walk/postwalk convert-node (forms/->form example-node {})))
-       (t/p :convert.postwalk/core
-            (walk/postwalk convert-node (forms/->form core-parsed {})))
-       (t/p :convert.prewalk/example
-            (walk/prewalk convert-node (forms/->form example-node {})))
-       (t/p :convert.prewalk/core
-            (walk/prewalk convert-node (forms/->form core-parsed {})))
-       (t/p :convert.->span/core
-            (forms/->span (forms/->form core-parsed {}))))))
+        {}
+      (dotimes [_ 125]
+        (t/p :convert.postwalk/example
+             (walk/postwalk convert-node (forms/->form example-node {})))
+        (t/p :convert.postwalk/core
+             (walk/postwalk convert-node (forms/->form core-parsed {})))
+        (t/p :convert.prewalk/example
+             (walk/prewalk convert-node (forms/->form example-node {})))
+        (t/p :convert.prewalk/core
+             (walk/prewalk convert-node (forms/->form core-parsed {})))
+        (t/p :convert.->span/core
+             (forms/->span (forms/->form core-parsed {}))))))
   (prof/clear-results)
-  (time (with-redefs [#_#_forms/node-attributes (constantly {})]
-          (prof/profile (dotimes [_ 125]
-                          (t/p :convert.postwalk/core
-                               (walk/postwalk convert-node
-                                              (forms/->form core-parsed
-                                                            {:update-subnodes?
-                                                             true})))))))
-  (time (with-redefs [#_#_forms/node-attributes (constantly {})]
-          (prof/profile (dotimes [_ 125]
-                          (t/p :convert.prewalk/core
-                               (walk/prewalk convert-node
-                                             (forms/->form core-parsed
-                                                           {:update-subnodes?
-                                                            true})))))))
+  (time (prof/profile (dotimes [_ 125]
+                        (t/p :convert.->span/core
+                             (forms/->span (forms/->form core-parsed
+                                                         {:update-subnodes?
+                                                          true}))))))
+  (time (prof/profile (dotimes [_ 125]
+                        (t/p :convert.postwalk/core
+                             (walk/postwalk convert-node
+                                            (forms/->form core-parsed
+                                                          {:update-subnodes?
+                                                           true}))))))
+  (time (prof/profile (dotimes [_ 125]
+                        (t/p :convert.prewalk/core
+                             (walk/prewalk convert-node
+                                           (forms/->form core-parsed
+                                                         {:update-subnodes?
+                                                          true}))))))
   (prof/profile (dotimes [_ 1250000]
                   (t/p :forms/->form
                        (forms/->form core-parsed {:update-subnodes? true}))))
@@ -358,7 +364,18 @@
     (into m! [[:a 1 :b 2]])
     (persistent! m!))
   (t/profile {}
-             (dotimes [_ 1000000]
-               (t/p :literal (do "s"))
-               (t/p :str-fn (do (str "s" nil)))
-               (t/p :str-join (do (str "s" (clojure.string/join " " [])))))))
+    (dotimes [_ 1000000]
+      (t/p :literal (do "s"))
+      (t/p :str-fn (do (str "s" nil)))
+      (t/p :str-join (do (str "s" (clojure.string/join " " [])))))))
+
+
+(comment
+  (t/profile {}
+    (dotimes [_ 1000000]
+      (t/p :var-coerce (node/coerce (var clojure.core/str)))
+      (t/p :var-construct
+           (node/var-node (node/token-node (symbol
+                                            "clojure.core/str"))))))
+  (node/var-node 'clojure.core/str)
+  (var 'clojure.core/str))

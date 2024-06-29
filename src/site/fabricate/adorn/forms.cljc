@@ -784,7 +784,7 @@
   (let [node? (node/node? i)]
     (cond (not node?) i
           (and node? (not (node/inner? i))) (token->span i)
-          (and node? (node/inner? i) ((complement #{:var}) (node/tag i)))
+          (and node? (node/inner? i) #_((complement #{:var}) (node/tag i)))
           #_(forms/coll->span i {} (fn ident [si & args] si))
           (->span i {} (fn ident [si & args] si))
           (#{:var} (node/tag i)) (->span i)
