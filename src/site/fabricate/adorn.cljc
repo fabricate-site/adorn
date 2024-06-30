@@ -28,7 +28,7 @@
   ([node] (form-type node {})))
 
 
-(defmulti node->hiccup
+(defmulti form->hiccup
   "Extensible display of arbitrary Clojure values and rewrite-clj nodes as Hiccup elements.
 
   Falls back to defaults defined in `site.fabricate.adorn.forms` namespace for unimplemented values"
@@ -37,130 +37,130 @@
 
 ;; TODO: figure out attribute passthrough for subnodes
 
-(defmethod node->hiccup :display/fn
+(defmethod form->hiccup :display/fn
   [node opts]
   (let [display-fn (get opts :display-type)]
     (display-fn (forms/->node node) opts)))
 
-(defmethod node->hiccup :fn
+(defmethod form->hiccup :fn
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
-   (forms/fn->span (forms/->node node) attrs node->hiccup))
-  ([node] (forms/fn->span (forms/->node node) {} node->hiccup)))
+   (forms/fn->span (forms/->node node) attrs form->hiccup))
+  ([node] (forms/fn->span (forms/->node node) {} form->hiccup)))
 
-(defmethod node->hiccup :meta
+(defmethod form->hiccup :meta
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
-   (forms/meta->span (forms/->node node) attrs node->hiccup))
-  ([node] (forms/meta->span (forms/->node node) {} node->hiccup)))
+   (forms/meta->span (forms/->node node) attrs form->hiccup))
+  ([node] (forms/meta->span (forms/->node node) {} form->hiccup)))
 
-(defmethod node->hiccup :multi-line
+(defmethod form->hiccup :multi-line
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
    (forms/token->span (forms/->node node) attrs))
   ([node] (forms/token->span (forms/->node node) {})))
 
-(defmethod node->hiccup :whitespace
+(defmethod form->hiccup :whitespace
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
    (forms/whitespace->span (forms/->node node) attrs))
   ([node] (forms/whitespace->span (forms/->node node) {})))
 
-(defmethod node->hiccup :comma
+(defmethod form->hiccup :comma
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
    (forms/whitespace->span (forms/->node node)
                            (update attrs :classes conj "comma")))
   ([node] (forms/whitespace->span (forms/->node node) {:classes ["comma"]})))
 
-(defmethod node->hiccup :uneval
+(defmethod form->hiccup :uneval
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
-   (forms/uneval->span (forms/->node node) attrs node->hiccup))
-  ([node] (forms/uneval->span (forms/->node node) {} node->hiccup)))
+   (forms/uneval->span (forms/->node node) attrs form->hiccup))
+  ([node] (forms/uneval->span (forms/->node node) {} form->hiccup)))
 
-(defmethod node->hiccup :vector
+(defmethod form->hiccup :vector
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
-   (forms/coll->span (forms/->node node) attrs node->hiccup))
-  ([node] (forms/coll->span (forms/->node node) {} node->hiccup)))
+   (forms/coll->span (forms/->node node) attrs form->hiccup))
+  ([node] (forms/coll->span (forms/->node node) {} form->hiccup)))
 
-(defmethod node->hiccup :token
+(defmethod form->hiccup :token
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
    (forms/token->span (forms/->node node) attrs))
   ([node] (forms/token->span (forms/->node node) {})))
 
-(defmethod node->hiccup :syntax-quote
+(defmethod form->hiccup :syntax-quote
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
-   (forms/syntax-quote->span (forms/->node node) attrs node->hiccup))
-  ([node] (forms/syntax-quote->span (forms/->node node) {} node->hiccup)))
+   (forms/syntax-quote->span (forms/->node node) attrs form->hiccup))
+  ([node] (forms/syntax-quote->span (forms/->node node) {} form->hiccup)))
 
-(defmethod node->hiccup :list
+(defmethod form->hiccup :list
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
-   (forms/coll->span (forms/->node node) attrs node->hiccup))
-  ([node] (forms/coll->span (forms/->node node) {} node->hiccup)))
+   (forms/coll->span (forms/->node node) attrs form->hiccup))
+  ([node] (forms/coll->span (forms/->node node) {} form->hiccup)))
 
-(defmethod node->hiccup :var
+(defmethod form->hiccup :var
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
    (forms/var->span (forms/->node node) attrs))
   ([node] (forms/var->span (forms/->node node) {})))
 
-(defmethod node->hiccup :quote
+(defmethod form->hiccup :quote
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
-   (forms/quote->span (forms/->node node) attrs node->hiccup))
-  ([node] (forms/quote->span (forms/->node node) {} node->hiccup)))
+   (forms/quote->span (forms/->node node) attrs form->hiccup))
+  ([node] (forms/quote->span (forms/->node node) {} form->hiccup)))
 
-(defmethod node->hiccup :unquote
+(defmethod form->hiccup :unquote
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
-   (forms/unquote->span (forms/->node node) attrs node->hiccup))
-  ([node] (forms/unquote->span (forms/->node node) {} node->hiccup)))
+   (forms/unquote->span (forms/->node node) attrs form->hiccup))
+  ([node] (forms/unquote->span (forms/->node node) {} form->hiccup)))
 
-(defmethod node->hiccup :deref
+(defmethod form->hiccup :deref
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
-   (forms/deref->span (forms/->node node) attrs node->hiccup))
-  ([node] (forms/deref->span (forms/->node node) {} node->hiccup)))
+   (forms/deref->span (forms/->node node) attrs form->hiccup))
+  ([node] (forms/deref->span (forms/->node node) {} form->hiccup)))
 
-(defmethod node->hiccup :comment
+(defmethod form->hiccup :comment
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
    (forms/comment->span (forms/->node node) attrs))
   ([node] (forms/comment->span (forms/->node node) {})))
 
-(defmethod node->hiccup :regex
+(defmethod form->hiccup :regex
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
    (forms/token->span (forms/->node node) attrs))
   ([node] (forms/token->span (forms/->node node) {})))
 
-(defmethod node->hiccup :set
+(defmethod form->hiccup :set
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
-   (forms/coll->span (forms/->node node) attrs node->hiccup))
-  ([node] (forms/coll->span (forms/->node node) {} node->hiccup)))
+   (forms/coll->span (forms/->node node) attrs form->hiccup))
+  ([node] (forms/coll->span (forms/->node node) {} form->hiccup)))
 
-(defmethod node->hiccup :newline
+(defmethod form->hiccup :newline
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
    (forms/newline->span (forms/->node node) attrs))
   ([node] (forms/newline->span (forms/->node node) {})))
 
-(defmethod node->hiccup :map
+(defmethod form->hiccup :map
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
-   (forms/coll->span (forms/->node node) attrs node->hiccup))
-  ([node] (forms/coll->span (forms/->node node) {} node->hiccup)))
+   (forms/coll->span (forms/->node node) attrs form->hiccup))
+  ([node] (forms/coll->span (forms/->node node) {} form->hiccup)))
 
-(defmethod node->hiccup :reader-macro
+(defmethod form->hiccup :reader-macro
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
-   (forms/reader-cond->span (forms/->node node) attrs node->hiccup))
-  ([node] (forms/reader-cond->span (forms/->node node) {} node->hiccup)))
+   (forms/reader-cond->span (forms/->node node) attrs form->hiccup))
+  ([node] (forms/reader-cond->span (forms/->node node) {} form->hiccup)))
 
-(defmethod node->hiccup :forms
+(defmethod form->hiccup :forms
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
-   (apply list (map #(node->hiccup (forms/->node %) {}) (node/children node))))
+   (apply list (map #(form->hiccup (forms/->node %) {}) (node/children node))))
   ([node]
-   (apply list (map #(node->hiccup (forms/->node %) {}) (node/children node)))))
+   (apply list (map #(form->hiccup (forms/->node %) {}) (node/children node)))))
 
-(defmethod node->hiccup :default
+(defmethod form->hiccup :default
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
-   (forms/->span (forms/->node node) attrs node->hiccup))
-  ([node] (forms/->span (forms/->node node) {} node->hiccup)))
+   (forms/->span (forms/->node node) attrs form->hiccup))
+  ([node] (forms/->span (forms/->node node) {} form->hiccup)))
 
 
 
 (defn clj->hiccup
   "Convert the given Clojure string, expression, or rewrite-clj node to a Hiccup data structure.
 
-  Uses the multimethod `site.fabricate.adorn/node->hiccup` for dispatch."
+  Uses the multimethod `site.fabricate.adorn/form->hiccup` for dispatch."
   ([src opts]
-   (node->hiccup (forms/->node src (select-keys opts [:lang :update-subnodes?]))
+   (form->hiccup (forms/->node src (select-keys opts [:lang :update-subnodes?]))
                  opts))
   ([src] (clj->hiccup src {})))

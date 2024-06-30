@@ -20,7 +20,7 @@
              display-type)
        ;; TODO: investigate first/peek further
        (let [node-tag    (node/tag node)
-             tag-method  (get-method adorn/node->hiccup node-tag)
+             tag-method  (get-method adorn/form->hiccup node-tag)
              node-hiccup (tag-method node)]
          (update-in node-hiccup [1 :class] str " custom-type"))
        node))))
@@ -33,7 +33,7 @@
 
 
 
-(defmethod adorn/node->hiccup :custom
+(defmethod adorn/form->hiccup :custom
   ([node opts] (custom-dispatch node opts))
   ([node] (custom-dispatch node {})))
 
