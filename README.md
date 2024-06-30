@@ -9,6 +9,86 @@ If you want to add syntax highlighting to your project without using a JavaScrip
 
 More broadly, I don't think Clojure should have to rely on other language ecosystems for good display of our source code. I think it can be done better in Clojure, because Clojure code is Clojure data and we have powerful facilities for working with it, especially with the widespread use of the excellent rewrite-clj library.
 
+## Quickstart
+
+Adorn provides a minimal API in the `site.fabricate.adorn` namespace. Use it to produce Hiccup elements - nested `:span` vectors.
+
+```clojure
+(require '[site.fabricate.adorn :as adorn :refer [clj->hiccup]])
+```
+
+You can pass quoted Clojure forms:
+
+```clojure
+(clj->hiccup '[:vector {:map-key :map-val} 'symbol])
+```
+
+This results in the following data structure:
+
+```clojure
+
+([:span
+  {:class "language-clojure vector"}
+  [:span {:class "bracket-open"} "["]
+  [:span
+   {:class "language-clojure keyword",
+    :data-java-class "clojure.lang.Keyword",
+    :data-clojure-keyword ":vector"}
+   ":vector"]
+  [:span {:class "language-clojure whitespace"} " "]
+  [:span
+   {:class "language-clojure map"}
+   [:span {:class "brace-open"} "{"]
+   [:span
+    {:class "language-clojure keyword",
+     :data-java-class "clojure.lang.Keyword",
+     :data-clojure-keyword ":map-key"}
+    ":map-key"]
+   [:span {:class "language-clojure whitespace"} " "]
+   [:span
+    {:class "language-clojure keyword",
+     :data-java-class "clojure.lang.Keyword",
+     :data-clojure-keyword ":map-val"}
+    ":map-val"]
+   [:span {:class "brace-close"} "}"]]
+  [:span {:class "language-clojure whitespace"} " "]
+  [:span
+   {:class "language-clojure quote"}
+   [:span {:class "language-clojure quote-token"} "'"]
+   [:span
+    {:class "language-clojure symbol",
+     :data-java-class "clojure.lang.Symbol",
+     :data-clojure-symbol "symbol"}
+    "symbol"]]
+  [:span {:class "bracket-close"} "]"]])
+
+```
+
+
+It also works on strings. A plain string will be assumed to contain one or more Clojure forms, and parsed with `rewrite-clj.parser/parse-string-all`.
+
+```clojure
+(clj->hiccup "[:vector {:map-key :map-val} 'symbol]")
+```
+
+And it works on  `rewrite-clj` nodes:
+
+```clojure
+
+(require '[rewrite-clj.parser :as p])
+
+(clj->hiccup (p/parse-string "[:vector {:map-key :map-val} 'symbol]"))
+
+```
+
+## Extending adorn
+
+`site.fabricate.adorn/clj->hiccup` uses the multimethod `site.fabricate.adorn/form->hiccup` to dispatch, which means it can be extended to new form types. 
+
+## Form-level API
+
+For more information, see the API docs.
+
 ## Other libraries with overlapping aims
 - [Glow](https://github.com/venantius/glow) is another server-side syntax highlighting library for Clojure. It only runs on the JVM because it uses [ANTLR](https://www.antlr.org/) to parse Clojure. It also uses [Enlive](https://github.com/cgrand/enlive) instead of Hiccup for its intermediate representation of parsed Clojure code.
 - [Clygments](https://github.com/bfontaine/clygments) wraps the [Pygments](https://pygments.org/) Python library, which obviously means this library introduces a dependency on Python. 
