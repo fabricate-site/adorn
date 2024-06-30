@@ -52,11 +52,11 @@
                 "reserved rewrite-clj tags should be ignored"))))
     (t/is (= :custom
              (:display-type (forms/->node (with-meta (p/parse-string-all ":abc")
-                                            {:node/display-type :custom
-                                             :node/attr :val})))))
+                                                     {:node/display-type :custom
+                                                      :node/attr :val})))))
     (t/is (contains? (forms/->node (with-meta (p/parse-string-all ":abc")
-                                     {:node/display-type :custom
-                                      :node/attr         :val}))
+                                              {:node/display-type :custom
+                                               :node/attr         :val}))
                      :display-type))
     (t/is (= :clj (:lang (forms/->node :abc {:lang :clj}))))
     ;; *should* these be coerced into non-metadata nodes?
@@ -188,12 +188,13 @@
   (t/is (= [:span
             {#?@(:clj [:data-java-class "java.lang.String"]
                  :cljs [:data-js-class "js/String"])
-             :class "language-clojure string"} "str"]
+             :class "language-clojure string"} "\"" "str" "\""]
            (forms/token->span (node/string-node "str"))))
   (t/is (= [:span
             {#?@(:clj [:data-java-class "java.lang.String"]
                  :cljs [:data-js-class "js/String"])
-             :class "language-clojure string multi-line"} "line1" [:br] "line2"]
+             :class "language-clojure string multi-line"} "\"" "line1" [:br]
+            "line2" "\""]
            (forms/token->span (node/string-node ["line1" "line2"]))))
   (doseq [token     (mapv node/coerce
                           [1 1.2
