@@ -4,6 +4,7 @@
     --color-navy: #211f43;
     --color-dark-forest-green: #1f382f;
     --color-brick: #973c3f;
+    --color-dark-brick: #74382c;
     --color-light-blue: #426b8c;
     --color-tan: #b99d82;
     --color-forest-green: #00662f;
@@ -32,12 +33,14 @@ a {
 
 p code {
     font-size: 0.85em;
+    color: var(--color-dark-brick);
 }
 li code {
     font-size: 0.85em;
 }
 
 pre {
+    font-size: 0.85em;
     max-width: 80ch;
 }
 
@@ -47,4 +50,19 @@ pre {
     font-weight: 600;
     letter-spacing: 0.015em;
     font-size: 2em;
+}
+
+.language-clojure.keyword {
+    color: var(--color-brick);
+}
+
+.language-clojure.symbol {
+    color: var(--color-navy);
+}
+.language-clojure.string {
+    color: var(--color-forest-green);
+}
+
+span[data-clojure-symbol="clj->hiccup"] {
+    font-weight: 900;
 }

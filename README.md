@@ -20,7 +20,7 @@ Adorn provides a minimal API in the `site.fabricate.adorn` namespace. Use it to 
 You can pass quoted Clojure forms:
 
 ```clojure
-(clj->hiccup '[:vector {:map-key :map-val} 'symbol])
+(clj->hiccup '[:vector {:map-key :map-val} symbol])
 ```
 
 This results in the following data structure:
@@ -53,13 +53,10 @@ This results in the following data structure:
    [:span {:class "brace-close"} "}"]]
   [:span {:class "language-clojure whitespace"} " "]
   [:span
-   {:class "language-clojure quote"}
-   [:span {:class "language-clojure quote-token"} "'"]
-   [:span
-    {:class "language-clojure symbol",
-     :data-java-class "clojure.lang.Symbol",
-     :data-clojure-symbol "symbol"}
-    "symbol"]]
+   {:class "language-clojure symbol",
+    :data-java-class "clojure.lang.Symbol",
+    :data-clojure-symbol "symbol"}
+   "symbol"]
   [:span {:class "bracket-close"} "]"]])
 
 ```

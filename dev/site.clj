@@ -1,6 +1,8 @@
 (ns site
   "Namespace for building Adorn's documentation."
   (:require [dev.onionpancakes.chassis.core :as c]
+            [clojure.walk :as walk]
+            [site.fabricate.adorn :as adorn]
             [cybermonday.core :as md]))
 
 (def out-dir "dev/html/")
@@ -19,6 +21,13 @@
      :rel  "stylesheet"}]
    [:link {:rel "stylesheet" :href "/main.css"}]))
 
+(defn convert-pre
+  [[tag attrs pre-contents :as pre]]
+  (if (and (string? pre-contents) (re-find #"language-clojure" pre-contents))
+    [tag attrs (adorn/clj->hiccup pre-contents)]
+    pre))
+
+(defn walk-hiccup [h] (walk/postwalk convert-pre h))
 
 (defn md-page
   [{:keys [body front-matter] :as data}]
@@ -28,8 +37,17 @@
      [:title "Adorn: extensible generation of Hiccup forms from Clojure code"]
      imports [:body [:main [:article (:body data)]]]]]])
 
+(defn convert-pre
+  [[tag attrs pre-contents :as pre]]
+  (if (= "clojure" (:language attrs))
+    [:pre [:code {:class "language-clojure"} (adorn/clj->hiccup pre-contents)]]
+    [:pre [:code {:class (str "language-" (:language attrs))}] pre-contents]))
 
-(def pages {"readme.html" (md-page (md/parse-md (slurp "README.md")))})
+(def pages
+  {"readme.html" (md-page (md/parse-md (slurp "README.md")
+                                       {:lower-fns {:markdown/fenced-code-block
+                                                    convert-pre}}))})
+
 
 (defn build!
   [{:keys [pages] :or {pages pages} :as opts}]
