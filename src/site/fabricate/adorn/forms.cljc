@@ -420,7 +420,7 @@
    (let [t (literal-type node)]
      (let [h [:span (node-attributes node attrs)]]
        (if (= :string t)
-         (apply conj h (interpose [:br] (:lines node)))
+         (apply conj h "\"" (conj (vec (interpose [:br] (:lines node))) "\""))
          (conj h (str node))))))
   ([node] (token->span node {})))
 
