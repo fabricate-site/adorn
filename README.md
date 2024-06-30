@@ -1,3 +1,5 @@
+[<img src="dev/logo.svg">](https://raw.githubusercontent.com/fabricate-site/adorn/81b595d0a4c39a6093965643bad993dd21697504/dev/logo.svg)
+
 # Adorn
 ## Extensible conversion of Clojure code to Hiccup forms.
 Adaptation of ideas described by Michiel Borkent in ["Writing a Clojure Highlighter from Scratch"](https://blog.michielborkent.nl/writing-clojure-highlighter.html). Uses rewrite-clj to parse Clojure source code and forms, and leverages multimethods to allow for user-extensibility.
