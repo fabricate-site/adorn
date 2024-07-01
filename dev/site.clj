@@ -43,10 +43,17 @@
     [:pre [:code {:class "language-clojure"} (adorn/clj->hiccup pre-contents)]]
     [:pre [:code {:class (str "language-" (:language attrs))}] pre-contents]))
 
+(defn convert-task-list
+  [[tag attrs [_ _attrs & contents]]]
+  [:li [:input {:disabled true :checked (:checked? attrs) :type "checkbox"}] " "
+   (apply list contents)])
+
 (def pages
   {"readme.html" (md-page (md/parse-md (slurp "README.md")
                                        {:lower-fns {:markdown/fenced-code-block
-                                                    convert-pre}}))})
+                                                    convert-pre
+                                                    :markdown/task-list-item
+                                                    convert-task-list}}))})
 
 
 (defn build!
