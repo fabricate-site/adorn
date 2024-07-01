@@ -7,6 +7,8 @@ Adaptation of ideas described by Michiel Borkent in ["Writing a Clojure Highligh
 ## Rationale
 If you want to add syntax highlighting to your project without using a JavaScript library like [Prism](https://prismjs.com/) or [Highlight.js](https://highlightjs.org/) and you use Hiccup to generate HTML, this library might help you. I wrote it in part because I wanted more control over how my source code was displayed in HTML and CSS while developing [fabricate](https://github.com/fabricate-site/fabricate) - which this code was factored out of - than was allowed by other tools. 
 
+Most source code highlighters focus on syntax. Adorn goes further than this and allows you the ability to highlight elements based on their meaning.
+
 More broadly, I don't think Clojure should have to rely on other language ecosystems for good display of our source code. I think it can be done better in Clojure, because Clojure code is Clojure data and we have powerful facilities for working with it, especially with the widespread use of the excellent rewrite-clj library.
 
 ## Quickstart
@@ -61,7 +63,6 @@ This results in the following data structure:
 
 ```
 
-
 It also works on strings. A plain string will be assumed to contain one or more Clojure forms, and parsed with `rewrite-clj.parser/parse-string-all`.
 
 ```clojure
@@ -85,6 +86,23 @@ And it works on  `rewrite-clj` nodes:
 ## Form-level API
 
 For more information, see the API docs.
+
+## Using adorn to highlight elements
+
+I included the resulting Hiccup form in the code examples because it demonstrates an important idea mentioned above: highlighting based on semantics. Adorn produces Hiccup elements, so if you display them by converting them to HTML you have all the power of CSS to display them as you see fit.
+
+Say you want to assign a different color to definitions: `def`, `defn`, `defmulti`, `defprotocol`, and so on. Assigning different highlight rules to each of these terms is very difficult in other syntax highlighters - to the extent that it's possible at all.
+
+Where appropriate, Adorn sets Clojure information, like the symbol in a form, as form-level [data attributes](https://developer.mozilla.org/en-US/docs/Learn/HTML/Howto/Use_data_attributes). So you can simply assign rules based on this attribute.
+
+```css
+span[data-clojure-symbol^="def"] {
+    font-weight: 900;
+}
+```
+
+Now everything that begins with `def` is covered - even if you forgot about a different one, like `clojure.test/deftest` - you'll be covered. 
+
 
 ## Other libraries with overlapping aims
 - [Glow](https://github.com/venantius/glow) is another server-side syntax highlighting library for Clojure. It only runs on the JVM because it uses [ANTLR](https://www.antlr.org/) to parse Clojure. It also uses [Enlive](https://github.com/cgrand/enlive) instead of Hiccup for its intermediate representation of parsed Clojure code.
