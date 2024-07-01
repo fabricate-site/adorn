@@ -63,6 +63,13 @@ This results in the following data structure:
 
 ```
 
+This results in the following HTML:
+
+<pre class="language-clojure">
+<span class="language-clojure vector"><span class="bracket-open">[</span><span class="language-clojure keyword" data-java-class="clojure.lang.Keyword" data-clojure-keyword=":vector">:vector</span><span class="language-clojure whitespace"> </span><span class="language-clojure map"><span class="brace-open">{</span><span class="language-clojure keyword" data-java-class="clojure.lang.Keyword" data-clojure-keyword=":map-key">:map-key</span><span class="language-clojure whitespace"> </span><span class="language-clojure keyword" data-java-class="clojure.lang.Keyword" data-clojure-keyword=":map-val">:map-val</span><span class="brace-close">}</span></span><span class="language-clojure whitespace"> </span><span class="language-clojure symbol" data-java-class="clojure.lang.Symbol" data-clojure-symbol="symbol">symbol</span><span class="bracket-close">]</span></span>
+</pre>
+
+
 It also works on strings. A plain string will be assumed to contain one or more Clojure forms, and parsed with `rewrite-clj.parser/parse-string-all`.
 
 ```clojure
@@ -70,9 +77,7 @@ It also works on strings. A plain string will be assumed to contain one or more 
 ```
 
 And it works on  `rewrite-clj` nodes:
-
 ```clojure
-
 (require '[rewrite-clj.parser :as p])
 
 (clj->hiccup (p/parse-string "[:vector {:map-key :map-val} 'symbol]"))

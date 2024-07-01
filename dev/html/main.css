@@ -17,6 +17,10 @@ pre, code {
     font-family: "Monaspace Xenon", Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
     font-optical-sizing: auto;
 }
+body {
+
+    background: var(--color-white);
+}
 
 article {
     font-size: min(4.25vmin, 22px);
@@ -24,6 +28,7 @@ article {
     max-width: 58ch;
     line-height: 1.38em;
     color: var(--color-charcoal);
+
     margin-left: 5em;
 }
 
@@ -65,4 +70,39 @@ pre {
 
 span[data-clojure-symbol="clj->hiccup"] {
     font-weight: 900;
+}
+
+h1 {
+
+    background: var(--color-light-blue);
+    color: var(--color-white);
+    padding: 0.5em;
+    padding-top: 0.75em;
+    border-radius: 0.25em;
+
+}
+
+
+h2 {
+    padding-top: 0.45em;
+    padding-bottom: 0.25em;
+    padding-left: 0.25em;
+    padding-right: 0.25em;
+    border-radius: 0.25em;
+}
+
+
+h2:nth-of-type(3n + 1) {
+    background: var(--color-light-blue);
+    color: var(--color-white);
+}
+
+h2:nth-of-type(3n + 2) {
+    background: var(--color-brick);
+    color: var(--color-white);
+}
+
+h2:nth-of-type(3n + 3) {
+    background: var(--color-forest-green);
+    color: var(--color-white);
 }
