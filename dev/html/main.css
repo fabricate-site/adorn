@@ -16,10 +16,11 @@
 pre, code {
     font-family: "Monaspace Xenon", Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
     font-optical-sizing: auto;
+    white-space: break-spaces;
+    hyphens: none;
 }
 body {
-
-    background: var(--color-white);
+    background: var(--color-navy);
 }
 
 article {
@@ -28,12 +29,25 @@ article {
     max-width: 58ch;
     line-height: 1.38em;
     color: var(--color-charcoal);
-
     margin-left: 5em;
 }
 
 a {
     color: var(--color-forest-green)
+}
+
+article p,pre,ul,ol {
+    background: var(--color-white);
+    padding: 0.4em;
+}
+
+article p {
+    margin-top: 0em;
+    margin-bottom: 0em;
+}
+
+h1,h2 ~ p {
+    /* border-radius: 0.25em; */
 }
 
 p code {
@@ -74,11 +88,10 @@ span[data-clojure-symbol="clj->hiccup"] {
 
 h1 {
 
-    background: var(--color-light-blue);
+    background: var(--color-navy);
     color: var(--color-white);
-    padding: 0.5em;
-    padding-top: 0.75em;
-    border-radius: 0.25em;
+    margin-top: 0.75em;
+    /* border-radius: 0.25em; */
 
 }
 
@@ -86,23 +99,23 @@ h1 {
 h2 {
     padding-top: 0.45em;
     padding-bottom: 0.25em;
-    padding-left: 0.25em;
-    padding-right: 0.25em;
-    border-radius: 0.25em;
+    /* padding-left: 0.25em; */
+    /* padding-right: 0.25em; */
+    /* border-radius: 0.25em; */
 }
 
 
-h2:nth-of-type(3n + 1) {
-    background: var(--color-light-blue);
+h2 {
+    background: var(--color-navy);
     color: var(--color-white);
 }
 
-h2:nth-of-type(3n + 2) {
-    background: var(--color-brick);
-    color: var(--color-white);
-}
+/* h2:nth-of-type(3n + 2) { */
+/*     background: var(--color-brick); */
+/*     color: var(--color-white); */
+/* } */
 
-h2:nth-of-type(3n + 3) {
-    background: var(--color-forest-green);
-    color: var(--color-white);
-}
+/* h2:nth-of-type(3n + 3) { */
+/*     background: var(--color-forest-green); */
+/*     color: var(--color-white); */
+/* } */
