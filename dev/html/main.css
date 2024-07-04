@@ -36,6 +36,10 @@ a {
     color: var(--color-forest-green)
 }
 
+img {
+    max-width: 100%;
+}
+
 article p,pre,ul,ol {
     background: var(--color-white);
     padding: 0.4em;

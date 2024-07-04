@@ -1,4 +1,4 @@
-![<img src="dev/logo.svg">](https://raw.githubusercontent.com/fabricate-site/adorn/81b595d0a4c39a6093965643bad993dd21697504/dev/logo.svg)
+![<img src="dev/logo.svg">](/logo-transparent.svg)
 
 # Adorn
 ## Extensible conversion of Clojure code to Hiccup forms.
@@ -16,7 +16,9 @@ More broadly, I don't think Clojure should have to rely on other language ecosys
 Adorn provides a minimal API in the `site.fabricate.adorn` namespace. Use it to produce Hiccup elements - nested `:span` vectors.
 
 ```clojure
-(require '[site.fabricate.adorn :as adorn :refer [clj->hiccup]])
+(require
+ '[site.fabricate.adorn :as adorn
+   :refer [clj->hiccup]])
 ```
 
 You can pass quoted Clojure forms:
@@ -63,7 +65,7 @@ This results in the following data structure:
 
 ```
 
-This results in the following HTML:
+When converted, it results in HTML like this:
 
 <pre class="language-clojure">
 <span class="language-clojure vector"><span class="bracket-open">[</span><span class="language-clojure keyword" data-java-class="clojure.lang.Keyword" data-clojure-keyword=":vector">:vector</span><span class="language-clojure whitespace"> </span><span class="language-clojure map"><span class="brace-open">{</span><span class="language-clojure keyword" data-java-class="clojure.lang.Keyword" data-clojure-keyword=":map-key">:map-key</span><span class="language-clojure whitespace"> </span><span class="language-clojure keyword" data-java-class="clojure.lang.Keyword" data-clojure-keyword=":map-val">:map-val</span><span class="brace-close">}</span></span><span class="language-clojure whitespace"> </span><span class="language-clojure symbol" data-java-class="clojure.lang.Symbol" data-clojure-symbol="symbol">symbol</span><span class="bracket-close">]</span></span>

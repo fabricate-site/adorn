@@ -3,6 +3,7 @@
   (:require [dev.onionpancakes.chassis.core :as c]
             [clojure.walk :as walk]
             [site.fabricate.adorn :as adorn]
+            [site.functions :as site-fns]
             [cybermonday.core :as md]))
 
 (def out-dir "dev/html/")
@@ -48,12 +49,41 @@
   [:li [:input {:disabled true :checked (:checked? attrs) :type "checkbox"}] " "
    (apply list contents)])
 
+(defn unparagraph-img
+  "if the given element is a paragraph containing only a single image,
+  return the image without the enclosing paragraph"
+  [i]
+  (if
+      (and (vector? i) (= :p (first i)) (= 3 (count i)) (= :img (get-in i [2 0])))
+    (peek i)
+    i))
+
+(comment
+  (unparagraph-img [:p {}
+                    [:img
+                     {:src   "/logo-transparent.svg"
+                      :alt   "<img src=\"dev/logo.svg\">"
+                      :title nil}]]))
+
+
+
+
 (def pages
   {"readme.html" (md-page (md/parse-md (slurp "README.md")
                                        {:lower-fns {:markdown/fenced-code-block
                                                     convert-pre
                                                     :markdown/task-list-item
-                                                    convert-task-list}}))})
+                                                    convert-task-list
+                                                    :p unparagraph-img}}))
+   "demos.html"
+   ;; look at how easy this is
+   [c/doctype-html5
+    [:html [:head [:title "Adorn: code formatting demos"] imports]
+     [:body
+      [:main
+       (into [:article]
+             (map site-fns/process-form
+                  (adorn/clj->hiccup (slurp "dev/site/demos.clj"))))]]]]})
 
 
 (defn build!
@@ -61,6 +91,10 @@
   (doseq [[out-path page-data] pages]
     (spit (str out-dir out-path) (c/html page-data))))
 
+
+
 (comment
-  (c/html [:div "some text — with a dash"])
+  (md-line "")
+  (md/parse-body "")
+  (md/parse-body (slurp "README.md"))
   (build! {}))
