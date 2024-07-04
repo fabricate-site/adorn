@@ -31,12 +31,11 @@
 (defn walk-hiccup [h] (walk/postwalk convert-pre h))
 
 (defn md-page
-  [{:keys [body front-matter] :as data}]
+  [{:keys [body frontmatter] :as data}]
   [c/doctype-html5
    [:html
-    [:head
-     [:title "Adorn: extensible generation of Hiccup forms from Clojure code"]
-     imports [:body [:main [:article (:body data)]]]]]])
+    [:head [:title (:title frontmatter "Adorn")] imports
+     [:body [:main [:article (:body data)]]]]]])
 
 (defn convert-pre
   [[tag attrs pre-contents :as pre]]
@@ -69,12 +68,18 @@
 
 
 (def pages
-  {"readme.html" (md-page (md/parse-md (slurp "README.md")
-                                       {:lower-fns {:markdown/fenced-code-block
-                                                    convert-pre
-                                                    :markdown/task-list-item
-                                                    convert-task-list
-                                                    :p unparagraph-img}}))
+  {"readme.html"      (md-page
+                       (md/parse-md
+                        (slurp "README.md")
+                        {:lower-fns {:markdown/fenced-code-block convert-pre
+                                     :markdown/task-list-item convert-task-list
+                                     :p unparagraph-img}}))
+   "performance.html" (md-page
+                       (md/parse-md
+                        (slurp "notes/performance.md")
+                        {:lower-fns {:markdown/fenced-code-block convert-pre
+                                     :markdown/task-list-item convert-task-list
+                                     :p unparagraph-img}}))
    "demos.html"
    ;; look at how easy this is
    [c/doctype-html5
@@ -96,5 +101,6 @@
 (comment
   (md-line "")
   (md/parse-body "")
+  (md/parse-md (slurp "notes/performance.md"))
   (md/parse-body (slurp "README.md"))
   (build! {}))
