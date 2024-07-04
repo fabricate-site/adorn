@@ -10,17 +10,20 @@
 
 (def comment-line-pattern #"(?ms)^(?:\s*;+\s*)(.*)\z")
 
-(defn comment->paragraph
-  [[_tag _attrs _start & contents]]
-  ;; don't worry about linebreaks for now
-  (->> contents
-       (mapcat (fn [line]
-                 (let [[_txt trimmed] (re-matches comment-line-pattern line)]
-                   (md-line trimmed))))
-       (reduce conj [:p {:class "comment-paragraph"}])))
+
+
+(defn comment->element
+  ([[_tag _attrs _start & contents] elem]
+   ;; don't worry about linebreaks for now
+   (->> contents
+        (mapcat (fn [line]
+                  (let [[_txt trimmed] (re-matches comment-line-pattern line)]
+                    (md-line trimmed))))
+        (reduce conj elem)))
+  ([i] (comment->element i [:span {:class "clj-comment"}])))
 
 (defn process-form
   [f]
   (if (and (vector? f) (re-find #"comment" (get-in f [1 :class])))
-    (comment->paragraph f)
+    (comment->element f)
     f))
