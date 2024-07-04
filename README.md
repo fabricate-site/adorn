@@ -1,4 +1,4 @@
-[<img src="dev/logo.svg">](https://raw.githubusercontent.com/fabricate-site/adorn/81b595d0a4c39a6093965643bad993dd21697504/dev/logo.svg)
+![<img src="dev/logo.svg">](https://raw.githubusercontent.com/fabricate-site/adorn/81b595d0a4c39a6093965643bad993dd21697504/dev/logo.svg)
 
 # Adorn
 ## Extensible conversion of Clojure code to Hiccup forms.
