@@ -2,7 +2,7 @@
 
 # Adorn
 ## Extensible conversion of Clojure code to Hiccup forms.
-Adaptation of ideas described by Michiel Borkent in ["Writing a Clojure Highlighter from Scratch"](https://blog.michielborkent.nl/writing-clojure-highlighter.html). Uses rewrite-clj to parse Clojure source code and forms, and leverages multimethods to allow for user-extensibility.
+Adaptation of ideas described by Michiel Borkent in ["Writing a Clojure Highlighter from Scratch"](https://blog.michielborkent.nl/writing-clojure-highlighter.html). Uses [`rewrite-clj`](https://github.com/clj-commons/rewrite-clj/) to parse Clojure source code and forms, and leverages multimethods to allow for user-extensibility.
 
 ## Rationale
 If you want to add syntax highlighting to your project without using a JavaScript library like [Prism](https://prismjs.com/) or [Highlight.js](https://highlightjs.org/) and you use Hiccup to generate HTML, this library might help you. I wrote it in part because I wanted more control over how my source code was displayed in HTML and CSS while developing [fabricate](https://github.com/fabricate-site/fabricate) - which this code was factored out of - than was allowed by other tools. 
