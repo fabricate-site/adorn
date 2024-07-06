@@ -4,6 +4,7 @@
             [clojure.walk :as walk]
             [site.fabricate.adorn :as adorn]
             [site.functions :as site-fns]
+            [site.api-tools :as api-tools]
             [cybermonday.core :as md]))
 
 (def out-dir "dev/html/")
@@ -79,27 +80,56 @@
 
 
 (def pages
-  {"index.html"       (md-page
-                       (md/parse-md
-                        (slurp "README.md")
-                        {:lower-fns {:markdown/fenced-code-block convert-pre
-                                     :markdown/task-list-item convert-task-list
-                                     :p unparagraph-img}}))
-   "performance.html" (md-page
-                       (md/parse-md
-                        (slurp "notes/performance.md")
-                        {:lower-fns {:markdown/fenced-code-block convert-pre
-                                     :markdown/task-list-item convert-task-list
-                                     :p unparagraph-img}}))
+  {"index.html"           (md-page (md/parse-md (slurp "README.md")
+                                                {:lower-fns
+                                                 {:markdown/fenced-code-block
+                                                  convert-pre
+                                                  :markdown/task-list-item
+                                                  convert-task-list
+                                                  :p unparagraph-img}}))
+   "performance.html"     (md-page (md/parse-md (slurp "notes/performance.md")
+                                                {:lower-fns
+                                                 {:markdown/fenced-code-block
+                                                  convert-pre
+                                                  :markdown/task-list-item
+                                                  convert-task-list
+                                                  :p unparagraph-img}}))
    #_#_"demos.html"
-     ;; look at how easy this is
-     [c/doctype-html5
-      [:html [:head [:title "Adorn: code formatting demos"] imports]
-       [:body
-        [:main
-         (into [:article]
-               (map site-fns/process-form
-                    (adorn/clj->hiccup (slurp "dev/site/demos.clj"))))]]]]})
+   ;; look at how easy this is
+   [c/doctype-html5
+    [:html [:head [:title "Adorn: code formatting demos"] imports]
+     [:body
+      [:main
+       (into [:article]
+             (map site-fns/process-form
+                  (adorn/clj->hiccup (slurp "dev/site/demos.clj"))))]]]]
+   "API/adorn.html"       [c/doctype-html5
+                           [:html [:head [:title "Adorn: Core API"] imports]
+                            [:body
+                             [:main
+                              (into [:article
+                                     [:h1 [:code "site.fabricate.adorn"]
+                                      " namespace"]
+                                     [:p {:class "clojure-ns-doc"}
+                                      (:doc (meta (find-ns
+                                                   'site.fabricate.adorn)))]]
+                                    (map api-tools/document-ns-var
+                                         (ns-publics
+                                          'site.fabricate.adorn.forms)))]]]]
+   "API/adorn/forms.html" [c/doctype-html5
+                           [:html [:head [:title "Adorn: Forms API"] imports]
+                            [:body
+                             [:main
+                              (into [:article
+                                     [:h1 [:code "site.fabricate.adorn.forms"]
+                                      " namespace"]
+                                     [:p {:class "clojure-ns-doc"}
+                                      (:doc (meta
+                                             (find-ns
+                                              'site.fabricate.adorn.forms)))]]
+                                    (map api-tools/document-ns-var
+                                         (ns-publics
+                                          'site.fabricate.adorn.forms)))]]]]})
 
 
 (defn build!

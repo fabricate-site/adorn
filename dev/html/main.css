@@ -17,6 +17,7 @@
     --color-forest-green: #00662f;
     --color-gold: #f9be00;
     font-family: "Newsreader", Iowan Old Style, Apple Garamond, Baskerville, Times New Roman, Droid Serif, Times, Source Serif Pro, serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol;
+    --font-mono: "Monaspace Xenon", Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
 
 }
 
@@ -136,3 +137,26 @@ h2 {
 /*     background: var(--color-forest-green); */
 /*     color: var(--color-white); */
 /* } */
+
+h2.var-name {
+    font-family: var(--font-mono);
+    color: var(--color-white) !important;
+    font-weight: 800;
+    font-variation-settings: 'wght' 800 !important;
+    margin-bottom: 0em;
+}
+
+.method-list>h4 {
+    background-color: var(--color-white);
+    padding-left: 0.5em;
+    margin-top: 0em;
+    margin-bottom: 0em;
+}
+
+code.var-type {
+    font-weight: 800;
+    font-variation-settings: 'wght' 800, 'wdth' 115;
+    color: var(--color-dark-brick);
+    background-color: var(--color-white);
+    padding: 0.25em;
+}
