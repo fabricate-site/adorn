@@ -91,7 +91,7 @@ And it works on  `rewrite-clj` nodes:
 
 ## Form-level API
 
-For more information, see the API docs.
+For more information, see the [API docs](https://adorn.fabricate.site/API/adorn/forms.html).
 
 ## Using adorn to highlight elements
 

@@ -171,6 +171,7 @@
 
 ;; TODO: should this be called ->form instead?
 (defn ->node
+  "Normalize the `rewrite-clj` node for use in Adorn."
   ([i
     {:keys [lang update-subnodes?]
      :as   opts
@@ -301,7 +302,7 @@
 (defn literal-type
   "Return the literal type for the given token node.
 
-                              Intended to be consistent across clj+cljs."
+Intended to be consistent across clj+cljs."
   [node]
   (cond (:lines node) :string
         (:k node) :keyword
@@ -380,7 +381,7 @@
 (defn node-attributes
   "Get the HTML element attributes for the given form.
 
-Allows passing through arbitrary attributes (apart from the `:class` attr)."
+  Allows passing through arbitrary attributes (apart from the `:class` attr)."
   ([{:keys [lang]
      :or   {lang #?(:clj :clj
                     :cljs :cljs)}
@@ -624,6 +625,7 @@ Separates the namespace from the keyword, if present."
   ([node] (reader-cond->span node {})))
 
 (defn ->span
+  "Convert the node to a Hiccup `:span` vector. Dispatches on the node tag."
   ([n attrs subform-fn]
    ;; only convert if necessary
    (let [node (if (:converted? n) n (->node n (select-keys attrs [:lang])))]

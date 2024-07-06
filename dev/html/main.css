@@ -34,7 +34,6 @@ body {
 article {
     font-size: min(4.25vmin, 22px);
     font-optical-sizing: auto;
-    max-width: 58ch;
     line-height: 1.38em;
     color: var(--color-charcoal);
     margin-left: min(4vw, 5em);
@@ -44,6 +43,10 @@ article {
 
 img {
     max-width: 100%;
+}
+
+article p {
+    max-width: 58ch;
 }
 
 article p,pre,ul,ol {
@@ -159,4 +162,14 @@ code.var-type {
     color: var(--color-dark-brick);
     background-color: var(--color-white);
     padding: 0.25em;
+}
+
+section.api-source {
+    font-size: 0.75em;
+    max-width: 120ch !important;
+    line-height: 1.38rem;
+}
+
+.api-source pre {
+    max-width: 120ch !important;
 }
