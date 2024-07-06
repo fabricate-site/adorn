@@ -27,7 +27,7 @@ pre, code {
     hyphens: none;
 }
 body {
-    background: var(--color-navy);
+    background: var(--color-light-blue);
 }
 
 article {
@@ -109,7 +109,7 @@ span[data-clojure-symbol="clj->hiccup"] {
 
 h1 {
 
-    background: var(--color-navy);
+    background: var(--color-light-blue);
     color: var(--color-white);
     margin-top: 0.75em;
     /* border-radius: 0.25em; */
@@ -127,7 +127,7 @@ h2 {
 
 
 h2 {
-    background: var(--color-navy);
+    background: var(--color-light-blue);
     color: var(--color-white);
 }
 
