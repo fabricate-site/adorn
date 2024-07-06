@@ -34,7 +34,6 @@ You can pass quoted Clojure forms:
 This results in the following data structure:
 
 ```clojure
-
 ([:span
   {:class "language-clojure vector"}
   [:span {:class "bracket-open"} "["]

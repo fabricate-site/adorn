@@ -53,7 +53,7 @@
   return the image without the enclosing paragraph"
   [i]
   (if
-      (and (vector? i) (= :p (first i)) (= 3 (count i)) (= :img (get-in i [2 0])))
+    (and (vector? i) (= :p (first i)) (= 3 (count i)) (= :img (get-in i [2 0])))
     (peek i)
     i))
 
@@ -68,7 +68,7 @@
 
 
 (def pages
-  {"readme.html"      (md-page
+  {"index.html"       (md-page
                        (md/parse-md
                         (slurp "README.md")
                         {:lower-fns {:markdown/fenced-code-block convert-pre
@@ -80,15 +80,15 @@
                         {:lower-fns {:markdown/fenced-code-block convert-pre
                                      :markdown/task-list-item convert-task-list
                                      :p unparagraph-img}}))
-   "demos.html"
-   ;; look at how easy this is
-   [c/doctype-html5
-    [:html [:head [:title "Adorn: code formatting demos"] imports]
-     [:body
-      [:main
-       (into [:article]
-             (map site-fns/process-form
-                  (adorn/clj->hiccup (slurp "dev/site/demos.clj"))))]]]]})
+   #_#_"demos.html"
+     ;; look at how easy this is
+     [c/doctype-html5
+      [:html [:head [:title "Adorn: code formatting demos"] imports]
+       [:body
+        [:main
+         (into [:article]
+               (map site-fns/process-form
+                    (adorn/clj->hiccup (slurp "dev/site/demos.clj"))))]]]]})
 
 
 (defn build!
@@ -99,8 +99,6 @@
 
 
 (comment
-  (md-line "")
-  (md/parse-body "")
   (md/parse-md (slurp "notes/performance.md"))
   (md/parse-body (slurp "README.md"))
   (build! {}))
