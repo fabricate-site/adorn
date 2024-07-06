@@ -1,20 +1,34 @@
+@font-face {
+    font-family: "Monaspace Xenon";
+    src:
+        local("Monaspace Xenon");
+        url("/media/MonaspaceXenonVF.woff2") format("woff2");
+}
+
 :root {
     --color-white: #ececec;
     --color-charcoal: #333;
     --color-navy: #211f43;
     --color-dark-forest-green: #1f382f;
     --color-brick: #973c3f;
+    --color-dark-brick: #74382c;
     --color-light-blue: #426b8c;
     --color-tan: #b99d82;
     --color-forest-green: #00662f;
     --color-gold: #f9be00;
     font-family: "Newsreader", Iowan Old Style, Apple Garamond, Baskerville, Times New Roman, Droid Serif, Times, Source Serif Pro, serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol;
+    --font-mono: "Monaspace Xenon", Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
 
 }
 
 pre, code {
     font-family: "Monaspace Xenon", Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
     font-optical-sizing: auto;
+    white-space: break-spaces;
+    hyphens: none;
+}
+body {
+    background: var(--color-light-blue);
 }
 
 article {
@@ -23,28 +37,126 @@ article {
     max-width: 58ch;
     line-height: 1.38em;
     color: var(--color-charcoal);
-    margin-left: 5em;
+    margin-left: min(4vw, 5em);
+
+    margin-right: min(4vw, 2em);
 }
 
-a {
-    color: var(--color-forest-green)
+img {
+    max-width: 100%;
+}
+
+article p,pre,ul,ol {
+    background: var(--color-white);
+    padding: 0.4em;
+}
+
+article > div > ul,ol {
+    list-style-position: outside;
+}
+
+
+article > div > ul > li::marker {
+    font-size: 1.2em;
+    color: var(--color-white);
+}
+
+article p {
+    margin-top: 0em;
+    margin-bottom: 0em;
+}
+
+h1,h2 ~ p {
+    /* border-radius: 0.25em; */
 }
 
 p code {
     font-size: 0.85em;
+    color: var(--color-dark-brick);
 }
 li code {
     font-size: 0.85em;
 }
 
 pre {
+    font-size: 0.85em;
     max-width: 80ch;
 }
 
-.eczar-display {
-    font-family: Eczar, serif;
-    font-optical-sizing: auto;
-    font-weight: 600;
-    letter-spacing: 0.015em;
-    font-size: 2em;
+
+a {
+    color: var(--color-forest-green);
+}
+
+
+.language-clojure.keyword {
+    color: var(--color-brick);
+}
+
+.language-clojure.symbol {
+    color: var(--color-navy);
+}
+.language-clojure.string {
+    color: var(--color-forest-green);
+}
+
+span[data-clojure-symbol="clj->hiccup"] {
+    font-weight: 900;
+}
+
+h1 {
+
+    background: var(--color-light-blue);
+    color: var(--color-white);
+    margin-top: 0.75em;
+    /* border-radius: 0.25em; */
+
+}
+
+
+h2 {
+    padding-top: 0.45em;
+    padding-bottom: 0.25em;
+    /* padding-left: 0.25em; */
+    /* padding-right: 0.25em; */
+    /* border-radius: 0.25em; */
+}
+
+
+h2 {
+    background: var(--color-light-blue);
+    color: var(--color-white);
+}
+
+/* h2:nth-of-type(3n + 2) { */
+/*     background: var(--color-brick); */
+/*     color: var(--color-white); */
+/* } */
+
+/* h2:nth-of-type(3n + 3) { */
+/*     background: var(--color-forest-green); */
+/*     color: var(--color-white); */
+/* } */
+
+h2.var-name {
+    font-family: var(--font-mono);
+    color: var(--color-white) !important;
+    font-weight: 800;
+    font-variation-settings: 'wght' 800 !important;
+    margin-bottom: 0em;
+}
+
+.method-list>h4 {
+    background-color: var(--color-white);
+    padding-left: 0.5em;
+    margin-top: 0em;
+    margin-bottom: 0em;
+}
+
+code.var-type {
+    font-weight: 800;
+    font-variation-settings: 'wght' 800, 'wdth' 115;
+    color: var(--color-dark-brick);
+    background-color: var(--color-white);
+    padding: 0.25em;
 }

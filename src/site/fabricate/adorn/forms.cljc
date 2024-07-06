@@ -380,7 +380,7 @@
 (defn node-attributes
   "Get the HTML element attributes for the given form.
 
-  Allows passing through arbitrary attributes (apart from the :class attr)."
+Allows passing through arbitrary attributes (apart from the `:class` attr)."
   ([{:keys [lang]
      :or   {lang #?(:clj :clj
                     :cljs :cljs)}
@@ -426,9 +426,9 @@
 
 
 (defn symbol->span
-  "Generate a Hiccup <span> data structure from the given symbol.
+  "Generate a Hiccup `:span` data structure from the given symbol.
 
-                              Separates the namespace from the symbol, if present."
+Separates the namespace from the symbol, if present."
   ([node attrs]
    (let [sym        (node/sexpr node)
          sym-ns     (namespace sym)
@@ -443,9 +443,9 @@
 
 
 (defn keyword->span
-  "Generate a Hiccup <span> data structure from the given keyword node.
+  "Generate a Hiccup :span data structure from the given keyword node.
 
-                              Separates the namespace from the keyword, if present."
+Separates the namespace from the keyword, if present."
   ([node attrs]
    (let [kw         (node/sexpr node)
          kw-ns      (namespace kw)
@@ -471,7 +471,7 @@
   ([node] (newline->span node {})))
 
 (def tokens
-  "Spans for individual components of Clojure forms"
+  "Spans for individual components of Clojure forms."
   {:dispatch      [:span {:class "language-clojure dispatch"} "#"]
    :caret         [:span {:class "language-clojure caret"} "^"]
    ;; is this really the best way of distinguishing quoted forms

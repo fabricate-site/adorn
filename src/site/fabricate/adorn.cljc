@@ -9,10 +9,7 @@
 (defn form-type
   "Get the type of the node for display, defaulting to the tag returned by `forms/node-type`.
 
-  If `{:display-type :custom-type}` data has been added to the form, return the type.
-  `:display-type` passed as an option in the options map takes precedence over existing node data.
-  `:display-type` can also be a map indicating how child nodes should be handled,
-  in which case the `:self*` entry is used for the top-level node."
+If `{:display-type :custom-type}` data has been added to the form, return the type. `:display-type` passed as an option in the options map takes precedence over existing node data. `:display-type` can also be a map indicating how child nodes should be handled, in which case the `:self*` entry is used for the top-level node."
   ([node opts]
    (let [display-type      (or (get opts :display-type)
                                (get node :display-type)
@@ -31,7 +28,7 @@
 (defmulti form->hiccup
   "Extensible display of arbitrary Clojure values and rewrite-clj nodes as Hiccup elements.
 
-  Falls back to defaults defined in `site.fabricate.adorn.forms` namespace for unimplemented values"
+Falls back to defaults defined in `site.fabricate.adorn.forms` namespace for unimplemented values."
   form-type)
 
 
@@ -159,7 +156,7 @@
 (defn clj->hiccup
   "Convert the given Clojure string, expression, or rewrite-clj node to a Hiccup data structure.
 
-  Uses the multimethod `site.fabricate.adorn/form->hiccup` for dispatch."
+Uses the multimethod `site.fabricate.adorn/form->hiccup` for dispatch."
   ([src opts]
    (form->hiccup (forms/->node src (select-keys opts [:lang :update-subnodes?]))
                  opts))
