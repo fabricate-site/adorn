@@ -20,7 +20,10 @@
    [:link
     {:href "https://unpkg.com/normalize.css@8.0.1/normalize.css"
      :rel  "stylesheet"}]
-   [:link {:rel "stylesheet" :href "/main.css"}]))
+   [:link {:rel "stylesheet" :href "/main.css"}]
+   ;; TODO: get SVG icon working
+   #_[:link {:rel "icon" :type "image/svg"}]
+   [:link {:rel "icon" :type "image/png" :href "/icon.png"}]))
 
 (defn convert-pre
   [[tag attrs pre-contents :as pre]]
