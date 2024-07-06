@@ -56,8 +56,13 @@
   return the image without the enclosing paragraph"
   [i]
   (if
-    (and (vector? i) (= :p (first i)) (= 3 (count i)) (= :img (get-in i [2 0])))
-    (peek i)
+      (and (vector? i) (= :p (first i)) (= 3 (count i)) (= :img (get-in i [2 0])))
+    (let [[_tag {:keys [src alt] :as attrs}] (peek i)]
+      ;; override for README img link
+      (if (= "<img src=\"dev/logo.svg\">" alt)
+        [:a {:href "https://adorn.fabricate.site"}
+         [:img {:src "/logo-transparent.svg"}]]
+        (peek i)))
     i))
 
 (comment
@@ -84,14 +89,14 @@
                                      :markdown/task-list-item convert-task-list
                                      :p unparagraph-img}}))
    #_#_"demos.html"
-     ;; look at how easy this is
-     [c/doctype-html5
-      [:html [:head [:title "Adorn: code formatting demos"] imports]
-       [:body
-        [:main
-         (into [:article]
-               (map site-fns/process-form
-                    (adorn/clj->hiccup (slurp "dev/site/demos.clj"))))]]]]})
+   ;; look at how easy this is
+   [c/doctype-html5
+    [:html [:head [:title "Adorn: code formatting demos"] imports]
+     [:body
+      [:main
+       (into [:article]
+             (map site-fns/process-form
+                  (adorn/clj->hiccup (slurp "dev/site/demos.clj"))))]]]]})
 
 
 (defn build!

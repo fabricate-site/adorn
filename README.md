@@ -2,7 +2,7 @@
 title: "Adorn: Extensible Conversion of Clojure code to Hiccup Forms"
 ---
 
-![<img src="dev/logo.svg">](/logo-transparent.svg)
+![<img src="dev/logo.svg">](https://adorn.fabricate.site/media/logo.svg)
 
 # Adorn
 ## Extensible conversion of Clojure code to Hiccup forms.
