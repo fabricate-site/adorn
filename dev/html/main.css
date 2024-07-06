@@ -36,11 +36,9 @@ article {
     max-width: 58ch;
     line-height: 1.38em;
     color: var(--color-charcoal);
-    margin-left: 5em;
-}
+    margin-left: min(4vw, 5em);
 
-a {
-    color: var(--color-forest-green)
+    margin-right: min(4vw, 2em);
 }
 
 img {
@@ -84,13 +82,11 @@ pre {
     max-width: 80ch;
 }
 
-.eczar-display {
-    font-family: Eczar, serif;
-    font-optical-sizing: auto;
-    font-weight: 600;
-    letter-spacing: 0.015em;
-    font-size: 2em;
+
+a {
+    color: var(--color-forest-green);
 }
+
 
 .language-clojure.keyword {
     color: var(--color-brick);
