@@ -1,7 +1,7 @@
 @font-face {
     font-family: "Monaspace Xenon";
     src:
-        local("Monaspace Xenon");
+        local("Monaspace Xenon"),
         url("/media/MonaspaceXenonVF.woff2") format("woff2");
 }
 
