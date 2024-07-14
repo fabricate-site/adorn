@@ -46,7 +46,7 @@ img {
     max-width: 100%;
 }
 
-article p {
+article p,ul,ol {
     max-width: 58ch;
 }
 

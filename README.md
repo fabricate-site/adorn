@@ -109,13 +109,15 @@ span[data-clojure-symbol^="def"] {
 
 Now everything that begins with `def` is covered - even if you forgot about a different one, like `clojure.test/deftest` - you'll be covered. 
 
+I use a similar rule to highlight instances of the most important function in this intro: <code><span data-clojure-symbol="clj->hiccup">clj->hiccup</span></code>. I hope Adorn gives you the data you need to highlight what makes the most sense for the code you're displaying, rather than forcing you into a 
+
 
 ## Other libraries with overlapping aims
 - [Glow](https://github.com/venantius/glow) is another server-side syntax highlighting library for Clojure. It only runs on the JVM because it uses [ANTLR](https://www.antlr.org/) to parse Clojure. It also uses [Enlive](https://github.com/cgrand/enlive) instead of Hiccup for its intermediate representation of parsed Clojure code.
 - [Clygments](https://github.com/bfontaine/clygments) wraps the [Pygments](https://pygments.org/) Python library, which obviously means this library introduces a dependency on Python. 
 
 ## Status
-Pre-alpha. Moving towards a stable API, but does not yet have clearly defined contracts.
+Pre-alpha. Moving towards a stable API, but does not yet have clearly defined contracts. Not yet implemented across all target platforms, does not yet have a fully robust extension mechanism, and still requires a unified data model for "forms."
 
 The `site.fabricate.adorn.forms` namespace has a fairly complete set of functions that are used as building blocks.
 
@@ -127,6 +129,7 @@ The `site.fabricate.adorn.forms` namespace has a fairly complete set of function
 - [ ] provide sensible defaults and an example of styling using plain CSS
   - [ ] including at least one useful Flexbox example
 - [x] provide an override mechanism for users who want to display particular forms in special ways
+  - [ ] provide a nested, map-based override mechanism for subforms in a Clojure form
 - [x] provide an extension mechanism for special symbols (e.g. `def`, `defn`, `def-my-custom-def`)
 - [ ] compatibility across Hiccup implementations
 

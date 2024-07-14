@@ -98,7 +98,31 @@
       (t/is (re-find #"custom" (get-in expr-hiccup [1 :class]))
             "Dispatch based on :type metadata should work")
       (t/is (re-find #"custom" (get-in expr-hiccup-2 [1 :class]))
-            "Dispatch based on option passed in should work"))))
+            "Dispatch based on option passed in should work"))
+    #_(t/testing "with map"
+        (let [map->dl     (fn map->dl [m-node _opts]
+                            (into [:dl]
+                                  (mapcat (fn [[k v]] [[:dt k] [:dd v]])
+                                          (node/sexpr m-node))))
+              test-map    {:term "definition" :term2 "definition"}
+              expected-dl [:dl [:dt :term] [:dd "definition"] [:dt :term2]
+                           [:dd "definition"]]]
+          (t/is (= expected-dl
+                   (adorn/clj->hiccup test-map {:display-type map->dl}))
+                "passing a function should change the display type")
+          (t/is (= expected-dl
+                   (adorn/clj->hiccup test-map {:display-type {:map map->dl}}))
+                "passing a map should change the display type")
+          (t/is (= expected-dl
+                   (adorn/clj->hiccup test-map
+                                      {:display-type {:self* map->dl}}))
+                "passing a map should change the display type")))))
+
+(comment
+  (adorn/clj->hiccup {:a 1 :b 2}
+                     {:display-type (fn ident [i & _args] (node/sexpr i))})
+  (adorn/form-type (forms/->node {:a 1 :b 2})
+                   {:display-type {:map (fn ident [i & _args] i)}}))
 
 (t/deftest src-files
   (let [forms-parsed (parse-file "src/site/fabricate/adorn/forms.cljc")

@@ -9,7 +9,7 @@
 (defn form-type
   "Get the type of the node for display, defaulting to the tag returned by `forms/node-type`.
 
-If `{:display-type :custom-type}` data has been added to the form, return the type. `:display-type` passed as an option in the options map takes precedence over existing node data. `:display-type` can also be a map indicating how child nodes should be handled, in which case the `:self*` entry is used for the top-level node."
+  If `{:display-type :custom-type}` data has been added to the form, return the type. `:display-type` passed as an option in the options map takes precedence over existing node data. `:display-type` can also be a map indicating how child nodes should be handled, in which case the `:self*` entry is used for the top-level node."
   ([node opts]
    (let [display-type      (or (get opts :display-type)
                                (get node :display-type)
@@ -38,6 +38,18 @@ Falls back to defaults defined in `site.fabricate.adorn.forms` namespace for uni
   [node opts]
   (let [display-fn (get opts :display-type)]
     (display-fn (forms/->node node) opts)))
+
+(defmethod form->hiccup :display/map
+  ([node {:keys [attrs display-type] :or {attrs {}} :as opts}]
+   #_(let [node      (forms/->node node)
+           ;; fall back to default if no self-display type is set
+           self-display-fn (:self* display-type)
+           converted (if self-display-fn (self-display-fn node opts))]
+       ;; this is tricky; how does conversion work for the child nodes?
+       ;; does the self display type override this or combine them somehow?
+       ;;
+       (if (node/children node) '...))
+   (throw (ex-info "Display map not implemented" {:status "pre-alpha"}))))
 
 (defmethod form->hiccup :fn
   ([node {:keys [attrs] :or {attrs {}} :as opts}]
@@ -156,7 +168,7 @@ Falls back to defaults defined in `site.fabricate.adorn.forms` namespace for uni
 (defn clj->hiccup
   "Convert the given Clojure string, expression, or rewrite-clj node to a Hiccup data structure.
 
-Uses the multimethod `site.fabricate.adorn/form->hiccup` for dispatch."
+  Uses the multimethod `site.fabricate.adorn/form->hiccup` for dispatch."
   ([src opts]
    (form->hiccup (forms/->node src (select-keys opts [:lang :update-subnodes?]))
                  opts))
