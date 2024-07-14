@@ -36,13 +36,20 @@
 
 (defn md-page
   [{:keys [body frontmatter] :as data}]
-  [c/doctype-html5
-   [:html
-    [:head
-     [:title
-      (:title frontmatter
-              "Adorn: Extensible conversion of Clojure code to Hiccup forms")]
-     imports [:body [:main [:article (:body data)]]]]]])
+  (let [{:keys [title description]
+         :or
+         {title "Adorn: Extensible conversion of Clojure code to Hiccup forms"
+          description
+          "Documentation for Adorn, a Clojure source code highlighting tool."}}
+        frontmatter]
+    [c/doctype-html5
+     [:html
+      [:head [:meta {:property "og:title" :content title}]
+       [:meta {:property "og:description" :content description}]
+       [:meta
+        {:property "og:image"
+         :content  "https://adorn.fabricate.site/adorn-badge.png"}]
+       [:title title] imports [:body [:main [:article (:body data)]]]]]]))
 
 (defn convert-pre
   [[tag attrs pre-contents :as pre]]
@@ -101,7 +108,14 @@
                     (adorn/clj->hiccup (slurp "dev/site/demos.clj"))))]]]]
    "API/adorn.html"
    [c/doctype-html5
-    [:html [:head [:title "Adorn: Core API"] imports]
+    [:html
+     (let [title "Adorn: Core API"]
+       [:head [:title title] [:meta {:property "og:title" :content title}]
+        [:meta
+         {:property "og:description" :content "Core, minimal API for Adorn"}]
+        [:meta
+         {:property "og:image"
+          :content  "https://adorn.fabricate.site/adorn-badge.png"}] imports])
      [:body
       [:main
        [:article [:h1 [:code "site.fabricate.adorn"] " namespace"]
@@ -117,7 +131,13 @@
                                      "src/site/fabricate/adorn.cljc"))])]]]]]]]
    "API/adorn/forms.html"
    [c/doctype-html5
-    [:html [:head [:title "Adorn: Forms API"] imports]
+    [:html
+     (let [title "Adorn: Forms API"]
+       [:head [:title title] [:meta {:property "og:title" :content title}]
+        [:meta {:property "og:description" :content "Form-level API for Adorn"}]
+        [:meta
+         {:property "og:image"
+          :content  "https://adorn.fabricate.site/adorn-badge.png"}] imports])
      [:body
       [:main
        [:article [:h1 [:code "site.fabricate.adorn.forms"] " namespace"]
