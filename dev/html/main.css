@@ -1,7 +1,9 @@
 @font-face {
     font-family: "Monaspace Xenon";
+    font-weight: 200 800;
+    /* font-style: normal; */
     src:
-        local("Monaspace Xenon"),
+        /* local("Monaspace Xenon"), */
         url("/media/MonaspaceXenonVF.woff2") format("woff2");
 }
 
@@ -16,14 +18,13 @@
     --color-tan: #b99d82;
     --color-forest-green: #00662f;
     --color-gold: #f9be00;
-    font-family: "Newsreader", Iowan Old Style, Apple Garamond, Baskerville, Times New Roman, Droid Serif, Times, Source Serif Pro, serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol;
-    --font-mono: "Monaspace Xenon", Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
+    font-family: "Newsreader", "Iowan Old Style", "Apple Garamond", Baskerville, "Times New Roman", "Droid Serif", Times, "Source Serif Pro", serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    --font-mono: "Monaspace Xenon", Menlo, Consolas, Monaco, "Liberation Mono", "Lucida Console", monospace;
 
 }
 
 pre, code {
-    font-family: "Monaspace Xenon", Menlo, Consolas, Monaco, Liberation Mono, Lucida Console, monospace;
-    font-optical-sizing: auto;
+    font-family: "Monaspace Xenon", Menlo, Consolas, Monaco, "Liberation Mono", "Lucida Console", monospace;
     white-space: break-spaces;
     hyphens: none;
 }
@@ -104,7 +105,8 @@ a {
 }
 
 span[data-clojure-symbol="clj->hiccup"] {
-    font-weight: 900;
+    font-weight: 800;
+    font-variation-settings: 'wght' 800;
 }
 
 h1 {
@@ -172,4 +174,26 @@ section.api-source {
 
 .api-source pre {
     max-width: 120ch !important;
+}
+
+/* def'd symbol highlighting: */
+
+
+span[data-clojure-symbol^="def"] {
+    font-weight: 800;
+    font-variation-settings: 'wght' 800;
+}
+
+span[data-clojure-symbol="def"] + .whitespace + .symbol {
+    color: var(--color-brick);
+}
+
+span[data-clojure-symbol="def"] + .whitespace + .meta:last-child  {
+    color: var(--color-brick);
+}
+
+
+
+span[data-clojure-symbol="defn"] + .whitespace + .symbol {
+    color: var(--color-brick);
 }
