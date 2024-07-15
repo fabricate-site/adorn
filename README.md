@@ -111,7 +111,7 @@ span[data-clojure-symbol^="def"] {
 
 Now everything that begins with `def` is covered - even if you forgot about a different one, like `clojure.test/deftest` - you'll be covered. 
 
-I use a similar rule to highlight instances of the most important function in this intro: <code><span data-clojure-symbol="clj->hiccup">clj->hiccup</span></code>. I hope Adorn gives you the data you need to highlight what makes the most sense for the code you're displaying, rather than forcing you into a 
+I use a similar rule to highlight instances of the most important function in this intro: <code><span data-clojure-symbol="clj->hiccup">clj->hiccup</span></code>. I hope Adorn gives you the data you need to highlight what makes the most sense for the code you're displaying, rather than forcing you into a predetermined set of options. 
 
 
 ## Other libraries with overlapping aims
